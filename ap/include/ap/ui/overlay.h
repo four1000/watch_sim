@@ -13,8 +13,8 @@ namespace ap {
 
 class OverlayManager final : public IInputHandler, private IEventListener, private ITimerListener {
 public:
-    static constexpr uint32_t kToastMs = 1000;
-    static constexpr uint32_t kAlertMs = 1000;
+    static constexpr uint32_t kToastMs = 2000;
+    static constexpr uint32_t kAlertMs = 3000;
 
     OverlayManager(EventBus& bus, SoftTimerPool& timers, IVibrator& vibrator)
         : m_bus(bus), m_timers(timers), m_vibrator(vibrator) {}

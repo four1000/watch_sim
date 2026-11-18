@@ -10,7 +10,7 @@ Start: `build\RelWithDebInfo\watch_sim.exe --trace`. Put the console next to the
 | 4 | Speed 11 km/h, START | `Ready → Running`. Timer, distance and pace are live. UP/DOWN switch data pages (screen-local state). |
 | 5 | BACK | Lap: toast + short vibration. Show `Lap #1 … ->1` in the trace (one receiver: the overlay). |
 | 6 | HR slider to 175 | Zone changes with hysteresis. After 3 s out of the target zone, a **modal** alert appears. |
-| 7 | Press BACK **while the alert is up** (it closes itself after 1 s) | Alert dismissed, and **no lap taken**: the overlay sits before the screen in the input chain. |
+| 7 | Press BACK **while the alert is up** (it closes itself after 3 s) | Alert dismissed, and **no lap taken**: the overlay sits before the screen in the input chain. |
 | 8 | Double LIGHT, then press START | Key lock. START is swallowed by the first handler in the chain. Double LIGHT again unlocks. |
 | 9 | START (pause), tick *Save fails*, choose Save | `Paused → Paused (save failed)`: the state machine refuses to lose data. Untick and save again → `SAVED`, back to the watch face, CSV written. |
 | 10 | Tick *GPS start fails*, start a run | `START FAILED`, and the session stays Idle. Error handling with return values and events, no exceptions. |

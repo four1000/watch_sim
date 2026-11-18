@@ -24,7 +24,7 @@ press DOWN                  # next data page: heart rate
 shot 06_running_hr_page.png
 
 hr 176                      # push HR up: out of target zone -> alert after 3 s debounce
-wait 3500                   # alert shows ~3 s after the jump and closes itself after 1 s
+wait 3500                   # alert shows ~3 s after the jump and closes itself after 3 s
 shot 07_hr_alert.png
 
 press BACK                  # modal alert consumes the key (no lap taken)
