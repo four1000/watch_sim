@@ -1,0 +1,35 @@
+#pragma once
+
+#include "ap/activity/activity_session.h"
+#include "ap/input/input_router.h"
+#include "ap/ui/navigator.h"
+
+namespace ap {
+
+// "Call one IActivityControl request" as a command object.
+// One class covers Run / Resume / Save / Discard by binding a member-function
+// pointer, instead of four near-identical classes.
+class ActivityCommand final : public ICommand {
+public:
+    using Request = bool (IActivityControl::*)(TickMs);
+
+    ActivityCommand(IActivityControl& control, Request request) : m_control(control), m_request(request) {}
+    void execute(TickMs now) override { (m_control.*m_request)(now); }
+
+private:
+    IActivityControl& m_control;
+    Request m_request;
+};
+
+// "Open this screen".
+class PushScreenCommand final : public ICommand {
+public:
+    PushScreenCommand(Navigator& nav, Screen& target) : m_nav(nav), m_target(target) {}
+    void execute(TickMs now) override { m_nav.push(m_target, now); }
+
+private:
+    Navigator& m_nav;
+    Screen& m_target;
+};
+
+}  // namespace ap

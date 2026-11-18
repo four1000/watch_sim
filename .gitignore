@@ -1,0 +1,9 @@
+build/
+out/
+.vs/
+shots/
+activities/
+*.user
+
+# personal interview notes, kept local only
+docs/talking-points.zh-TW.md

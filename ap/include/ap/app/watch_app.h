@@ -1,0 +1,143 @@
+#pragma once
+
+#include <cstdint>
+
+#include "ap/activity/activity_session.h"
+#include "ap/app/settings.h"
+#include "ap/core/ring_buffer.h"
+#include "ap/core/soft_timer.h"
+#include "ap/event/event_bus.h"
+#include "ap/health/hr_zone_monitor.h"
+#include "ap/input/gesture_recognizer.h"
+#include "ap/input/input_router.h"
+#include "ap/services/osal.h"
+#include "ap/services/services.h"
+#include "ap/ui/activity_flow.h"
+#include "ap/ui/commands.h"
+#include "ap/ui/navigator.h"
+#include "ap/ui/overlay.h"
+#include "ap/ui/screens.h"
+#include "ap/ui/system_handlers.h"
+#include "ap/ui/ui_model.h"
+
+namespace ap {
+
+// The application layer as one Active Object.
+//
+//   other threads / ISRs           AP thread (the only one touching AP state)
+//   --------------------           ------------------------------------------
+//   postKey() / postHr() --mutex--> inbox --> step(now):
+//   postGps()                                 1. drain inbox -> recognizer / bus
+//                                             2. gesture recognizer poll
+//                                             3. soft timers, 1 s tick
+//                                             4. bus.dispatch() (run-to-completion)
+//                                           render(canvas) when dirty
+//
+// Ownership: every AP object is a member (composition, no heap). Services are
+// injected by reference by the platform composition root (main.cpp / tests).
+// Member order matters: m_bus is declared first, so it is destroyed last,
+// after every Subscription held by the members below.
+class WatchApp final : public ISensorSink, private IEventListener {
+public:
+    struct Services {
+        IGpsService& gps;
+        IHeartRateService& hr;
+        IActivityRecorder& recorder;
+        IVibrator& vibrator;
+        IBacklight& backlight;
+        IWallClock& clock;
+        osal::IMutex& inboxMutex;
+    };
+
+    static constexpr std::size_t kInboxCapacity = 32;
+    static constexpr std::size_t kMaxInboxPerStep = 16;
+
+    explicit WatchApp(const Services& s);
+    WatchApp(const WatchApp&) = delete;
+    WatchApp& operator=(const WatchApp&) = delete;
+
+    // Wires subscriptions and the input chain, starts the HR service, shows
+    // the watch face. All "allocation" of the system happens here.
+    bool init(TickMs now);
+
+    // ---- Thread-safe producers (any context) -----------------------------------
+    bool postKey(const KeyEvent& e);
+    bool postHr(const HrSample& s) override;
+    bool postGps(const GpsSample& s) override;
+
+    // ---- AP thread ------------------------------------------------------------
+    void step(TickMs now);
+    bool needsRender() const { return m_dirty; }
+    void render(ICanvas& c);  // builds the UiModel, draws stack + overlay, clears dirty
+
+    // ---- Introspection (dev panel, tests) -------------------------------------
+    const UiModel& model() const { return m_model; }
+    ActivityState activityState() const { return m_session.state(); }
+    const char* topScreenName() const;
+    const char* overlayTitle() const { return m_overlay.title(); }
+    uint16_t inboxDropped() const;
+    uint16_t busDropped() const { return m_bus.dropped(); }
+    void setTrace(IEventTrace* t) { m_bus.setTrace(t); }
+    const ActivitySession& session() const { return m_session; }
+    const Navigator& navigator() const { return m_nav; }
+
+private:
+    struct InboxMsg {
+        enum class Kind : uint8_t { Key, Hr, Gps } kind;
+        union {
+            KeyEvent key;
+            HrSample hr;
+            GpsSample gps;
+        };
+    };
+
+    bool post(const InboxMsg& m);
+    void drainInbox();
+    void onEvent(const Event& e) override;
+    void buildModel();
+
+    Services m_svc;
+
+    // ---- infrastructure (declared first: outlives everything below) ----------
+    EventBus m_bus;
+    SoftTimerPool m_timers;
+    RingBuffer<InboxMsg, kInboxCapacity> m_inbox;  // guarded by m_svc.inboxMutex
+    uint16_t m_inboxDropped = 0;                   // guarded by m_svc.inboxMutex
+
+    // ---- domain --------------------------------------------------------------
+    GestureRecognizer m_gestures;
+    InputRouter m_router;
+    SettingsStore m_settings;
+    ActivitySession m_session;
+    HrZoneMonitor m_zones;
+
+    // ---- UI ------------------------------------------------------------------
+    Navigator m_nav;
+    MenuScreen m_activityMenu{"ACTIVITY"};
+    MenuScreen m_pauseMenu{"PAUSED"};
+    WatchFaceScreen m_watchFace;
+    ActivityDataScreen m_dataScreen;
+    SettingsScreen m_settingsScreen;
+
+    ActivityCommand m_cmdRun;
+    PushScreenCommand m_cmdSettings;
+    ActivityCommand m_cmdResume;
+    ActivityCommand m_cmdSave;
+    ActivityCommand m_cmdDiscard;
+
+    KeyLockHandler m_keyLock;
+    OverlayManager m_overlay;
+    BacklightHandler m_backlight;
+    ActivityFlowCoordinator m_flow;
+
+    // ---- presentation state --------------------------------------------------
+    UiModel m_model;
+    TickMs m_now = 0;
+    TickMs m_nextSecond = 0;
+    bool m_dirty = true;
+    bool m_initialized = false;
+
+    Subscription m_sub;
+};
+
+}  // namespace ap
