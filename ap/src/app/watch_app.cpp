@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "ap/ui/themed_canvas.h"
+
 namespace ap {
 
 WatchApp::WatchApp(const Services& s)
@@ -127,6 +129,8 @@ void WatchApp::step(TickMs now) {
     while (const auto g = m_gestures.next()) m_bus.publish(Event::makeGesture(*g));
 
     m_timers.poll(now);
+    // The backlight switches the theme, so a change (key or timeout) needs a redraw.
+    if (m_backlight.on() != m_model.backlightOn) m_dirty = true;
 
     if (timeReached(now, m_nextSecond)) {
         m_bus.publish(Event::makeSecondTick(now));
@@ -157,8 +161,11 @@ void WatchApp::buildModel() {
 
 void WatchApp::render(ICanvas& c) {
     buildModel();
-    m_nav.render(c, m_model);
-    m_overlay.render(c, m_model);
+    // Backlight on -> white background, dark text. Screens are unaware of it:
+    // they draw through a decorator that swaps the palette.
+    ThemedCanvas themed(c, m_model.backlightOn ? Theme::Light : Theme::Dark);
+    m_nav.render(themed, m_model);
+    m_overlay.render(themed, m_model);
     m_dirty = false;
 }
 

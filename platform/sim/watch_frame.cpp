@@ -70,7 +70,7 @@ void WatchFrame::draw(cv::Mat& frame, cv::Point origin, const cv::Mat& display, 
 
     cv::Mat shown;
     if (s.backlight) {
-        display.convertTo(shown, -1, 1.0, 25.0);  // backlight: brighter, lifted blacks
+        shown = display;  // the AP already switched to the light theme (white background, dark text)
     } else {
         display.convertTo(shown, -1, 0.78, 0.0);  // transflective display without light
     }

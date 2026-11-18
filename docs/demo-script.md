@@ -15,7 +15,7 @@ Start: `build\RelWithDebInfo\watch_sim.exe --trace`. Put the console next to the
 | 9 | START (pause), tick *Save fails*, choose Save | `Paused → Paused (save failed)`: the state machine refuses to lose data. Untick and save again → `SAVED`, back to the watch face, CSV written. |
 | 10 | Tick *GPS start fails*, start a run | `START FAILED`, and the session stays Idle. Error handling with return values and events, no exceptions. |
 
-Close with the tests: `ctest` → 78 tests, including **zero heap allocations after init** and **tick wrap**. If asked: `--wrap` starts 30 s before the 32-bit tick overflow.
+Close with the tests: `ctest` → 83 tests, including **zero heap allocations after init** and **tick wrap**. If asked: `--wrap` starts 30 s before the 32-bit tick overflow.
 
 ## Questions to expect
 

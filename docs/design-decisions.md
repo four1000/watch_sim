@@ -43,6 +43,18 @@ The chain is built once in `init()` and never mutated while `route()` iterates. 
 * screens are unit-tested by filling a struct (`ui_test.cpp`),
 * on a dual-core watch the snapshot could be handed to a UI task without sharing locks.
 
+### Backlight theme: a Decorator, not an `if` in every screen
+
+With the backlight on, the display switches to a white background with dark text. Screens keep drawing with one palette. `WatchApp::render()` wraps the real canvas in a `ThemedCanvas` for that frame, and the decorator maps each colour (`Black ↔ White`, and darker substitutes for yellow and cyan, which would vanish on white).
+
+| | `if (m.backlightOn)` in each screen | `ThemedCanvas` decorator (chosen) |
+|---|---|---|
+| New screen | must remember the theme | nothing to do |
+| Third theme (night mode, red-only) | edit every screen | one mapping function |
+| Cost | none | one extra virtual call per draw call, the decorator is a stack object (no heap) |
+
+The theme lives in the AP layer, not in the OpenCV adapter: it is a presentation rule, and it has to be identical on the real display driver. A backlight change (key or 8 s timeout) marks the frame dirty, so the redraw does not wait for the next 1 s tick.
+
 ## 6. Narrow interfaces (ISP)
 
 | Client | Sees | Does not see |

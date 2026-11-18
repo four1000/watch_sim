@@ -4,6 +4,7 @@
 
 #include "ap/ui/navigator.h"
 #include "ap/ui/screens.h"
+#include "ap/ui/themed_canvas.h"
 #include "fakes.h"
 
 using namespace ap;
@@ -121,12 +122,38 @@ TEST(MenuScreen, NavigatesAndExecutesSelectedCommand) {
     EXPECT_TRUE(menu.handle(press(KeyId::Start, Gesture::Short, 1234)));
     EXPECT_EQ(settings.runs, 1);
     EXPECT_EQ(settings.at, 1234u) << "command receives the gesture time";
-    EXPECT_TRUE(menu.handle(press(KeyId::Down)));  // wraps
-    EXPECT_EQ(menu.selected(), 0u);
     EXPECT_FALSE(menu.handle(press(KeyId::Back))) << "menu leaves BACK to the navigator";
 }
 
-TEST(MenuScreen, RendersSelectionAndNeighbours) {
+TEST(MenuScreen, SelectionStopsAtBothEndsWithoutWrapping) {
+    MenuScreen menu("PAUSED");
+    CountingCommand a, b, c;
+    menu.addItem("Resume", a);
+    menu.addItem("Save", b);
+    menu.addItem("Discard", c);
+    menu.enter(0);
+
+    EXPECT_TRUE(menu.handle(press(KeyId::Up))) << "consumed at the top, not passed on";
+    EXPECT_EQ(menu.selected(), 0u) << "no wrap to the last item";
+
+    for (int i = 0; i < 5; ++i) EXPECT_TRUE(menu.handle(press(KeyId::Down)));
+    EXPECT_EQ(menu.selected(), 2u) << "stops at the last item";
+
+    EXPECT_TRUE(menu.handle(press(KeyId::Up)));
+    EXPECT_EQ(menu.selected(), 1u);
+}
+
+TEST(MenuScreen, SingleItemMenuNeverMoves) {
+    MenuScreen menu("ONE");
+    CountingCommand a;
+    menu.addItem("Only", a);
+    menu.enter(0);
+    EXPECT_TRUE(menu.handle(press(KeyId::Down)));
+    EXPECT_TRUE(menu.handle(press(KeyId::Up)));
+    EXPECT_EQ(menu.selected(), 0u);
+}
+
+TEST(MenuScreen, ShowsOnlyNeighboursThatExist) {
     MenuScreen menu("PAUSED");
     CountingCommand a, b, c;
     menu.addItem("Resume", a);
@@ -134,10 +161,63 @@ TEST(MenuScreen, RendersSelectionAndNeighbours) {
     menu.addItem("Discard", c);
     menu.enter(0);
     fakes::FakeCanvas canvas;
+
     menu.render(canvas, UiModel{});
     EXPECT_TRUE(canvas.shows("PAUSED"));
     EXPECT_TRUE(canvas.shows("Resume"));
-    EXPECT_TRUE(canvas.shows("Discard")) << "previous item, wrapping";
+    EXPECT_TRUE(canvas.shows("Save")) << "next item below";
+    EXPECT_FALSE(canvas.shows("Discard")) << "top of the list: nothing above";
+
+    menu.handle(press(KeyId::Down));
+    menu.render(canvas, UiModel{});
+    EXPECT_TRUE(canvas.shows("Resume"));
+    EXPECT_TRUE(canvas.shows("Save"));
+    EXPECT_TRUE(canvas.shows("Discard")) << "middle: both neighbours";
+
+    menu.handle(press(KeyId::Down));
+    menu.render(canvas, UiModel{});
+    EXPECT_FALSE(canvas.shows("Resume")) << "bottom of the list: nothing below";
+    EXPECT_TRUE(canvas.shows("Save")) << "previous item above";
+    EXPECT_TRUE(canvas.shows("Discard"));
+}
+
+// ---- Theme (backlight) ---------------------------------------------------------------
+
+static_assert(themed(Color::Black, Theme::Light) == Color::White, "light theme: white background");
+static_assert(themed(Color::White, Theme::Light) == Color::Black, "light theme: dark text");
+static_assert(themed(Color::Yellow, Theme::Dark) == Color::Yellow, "dark theme is the identity");
+static_assert(!std::is_copy_constructible_v<ThemedCanvas>, "decorator wraps a reference");
+
+TEST(Theme, LightThemeKeepsEveryColourReadableOnWhite) {
+    const Color all[] = {Color::Black, Color::White,  Color::LightGray, Color::Gray,  Color::DarkGray,
+                         Color::Red,   Color::Orange, Color::Yellow,    Color::Green, Color::Blue,
+                         Color::Cyan,  Color::Zone1,  Color::Zone2,     Color::Zone3, Color::Zone4,
+                         Color::Zone5};
+    for (Color c : all) {
+        EXPECT_EQ(themed(c, Theme::Dark), c);
+        if (c == Color::Black) continue;  // the background itself
+        const Color l = themed(c, Theme::Light);
+        EXPECT_NE(l, Color::White) << "would vanish on white: " << static_cast<int>(c);
+        EXPECT_NE(l, Color::Yellow) << static_cast<int>(c);
+        EXPECT_NE(l, Color::Cyan) << static_cast<int>(c);
+        EXPECT_NE(l, Color::Zone1) << static_cast<int>(c);
+    }
+}
+
+TEST(Theme, ThemedCanvasForwardsThroughThePalette) {
+    fakes::FakeCanvas inner;
+    ThemedCanvas light(inner, Theme::Light);
+    EXPECT_EQ(light.width(), inner.width());
+    light.clear(Color::Black);
+    light.drawText(0, 0, "12:34", Font::Large, Color::White, Align::Center);
+    EXPECT_EQ(inner.background, Color::White);
+    EXPECT_EQ(inner.colorOf("12:34"), Color::Black);
+
+    ThemedCanvas dark(inner, Theme::Dark);
+    dark.clear(Color::Black);
+    dark.drawText(0, 0, "12:34", Font::Large, Color::White, Align::Center);
+    EXPECT_EQ(inner.background, Color::Black);
+    EXPECT_EQ(inner.colorOf("12:34"), Color::White);
 }
 
 TEST(ActivityDataScreen, BackMeansLapCancelOrNothingDependingOnState) {

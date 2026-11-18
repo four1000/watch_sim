@@ -171,6 +171,29 @@ TEST_F(App, LightTogglesBacklightWithTimeout) {
     EXPECT_FALSE(backlight.on);
 }
 
+TEST_F(App, BacklightSwitchesToWhiteBackgroundWithDarkText) {
+    app.render(canvas);
+    EXPECT_EQ(canvas.background, Color::Black) << "backlight off: dark theme";
+    EXPECT_EQ(canvas.colorOf("08:42"), Color::White);
+
+    press(KeyId::Light);
+    ASSERT_TRUE(backlight.on);
+    ASSERT_TRUE(app.needsRender());
+    app.render(canvas);
+    EXPECT_EQ(canvas.background, Color::White) << "backlight on: light theme";
+    EXPECT_EQ(canvas.colorOf("08:42"), Color::Black);
+
+    // The timeout turns the light off; that alone must request a redraw.
+    while (backlight.on) {
+        now += 20;
+        app.step(now);
+        if (backlight.on && app.needsRender()) app.render(canvas);
+    }
+    EXPECT_TRUE(app.needsRender());
+    app.render(canvas);
+    EXPECT_EQ(canvas.background, Color::Black);
+}
+
 TEST_F(App, SettingsReachableFromMenuAndBackReturns) {
     press(KeyId::Start);
     press(KeyId::Down);

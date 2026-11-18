@@ -77,13 +77,19 @@ class FakeCanvas final : public ap::ICanvas {
 public:
     int16_t width() const override { return 240; }
     int16_t height() const override { return 240; }
-    void clear(ap::Color) override { texts.clear(); ++clears; }
+    void clear(ap::Color c) override {
+        texts.clear();
+        textColors.clear();
+        background = c;
+        ++clears;
+    }
     void fillRect(int16_t, int16_t, int16_t, int16_t, ap::Color) override {}
     void fillCircle(int16_t, int16_t, int16_t, ap::Color) override {}
     void drawArc(int16_t, int16_t, int16_t, int16_t, int16_t, uint8_t, ap::Color) override {}
     void drawLine(int16_t, int16_t, int16_t, int16_t, uint8_t, ap::Color) override {}
-    void drawText(int16_t, int16_t, std::string_view t, ap::Font, ap::Color, ap::Align) override {
+    void drawText(int16_t, int16_t, std::string_view t, ap::Font, ap::Color c, ap::Align) override {
         texts.emplace_back(t);
+        textColors.push_back(c);
     }
 
     bool shows(const std::string& s) const {
@@ -92,7 +98,16 @@ public:
         }
         return false;
     }
+    // Colour of the first text containing `s`; Magenta-like sentinel (Zone5) if absent.
+    ap::Color colorOf(const std::string& s) const {
+        for (std::size_t i = 0; i < texts.size(); ++i) {
+            if (texts[i].find(s) != std::string::npos) return textColors[i];
+        }
+        return ap::Color::Zone5;
+    }
     std::vector<std::string> texts;
+    std::vector<ap::Color> textColors;
+    ap::Color background = ap::Color::Zone5;
     int clears = 0;
 };
 
