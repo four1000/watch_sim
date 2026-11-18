@@ -114,7 +114,7 @@ private:
     // ---- UI ------------------------------------------------------------------
     Navigator m_nav;
     MenuScreen m_activityMenu{"ACTIVITY"};
-    MenuScreen m_pauseMenu{"PAUSED"};
+    MenuScreen m_pauseMenu{"PAUSED", false};  // inside an activity: no clock
     WatchFaceScreen m_watchFace;
     ActivityDataScreen m_dataScreen;
     SettingsScreen m_settingsScreen;

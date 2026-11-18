@@ -37,7 +37,8 @@ class MenuScreen final : public Screen {
 public:
     static constexpr std::size_t kMaxItems = 6;
 
-    explicit MenuScreen(const char* title) : m_title(title) {}
+    // showClock = false for menus inside an activity (the pause menu).
+    explicit MenuScreen(const char* title, bool showClock = true) : m_title(title), m_showClock(showClock) {}
     bool addItem(const char* label, ICommand& cmd);  // init-time; false when full
 
     const char* name() const override { return m_title; }
@@ -48,6 +49,7 @@ protected:
     void onEnter(TickMs now) override;
     bool onGesture(const GestureEvent& e) override;
     void onRender(ICanvas& c, const UiModel& m) override;
+    bool showsClock() const override { return m_showClock; }
 
 private:
     struct Item {
@@ -55,6 +57,7 @@ private:
         ICommand* cmd = nullptr;
     };
     const char* m_title;
+    bool m_showClock;
     std::array<Item, kMaxItems> m_items{};
     std::size_t m_count = 0;
     std::size_t m_selected = 0;
@@ -75,6 +78,7 @@ protected:
     void onEnter(TickMs now) override;
     bool onGesture(const GestureEvent& e) override;
     void onRender(ICanvas& c, const UiModel& m) override;
+    bool showsClock() const override { return false; }
 
 private:
     void renderHeader(ICanvas& c, const UiModel& m) const;
@@ -101,6 +105,7 @@ protected:
     void onEnter(TickMs now) override;
     bool onGesture(const GestureEvent& e) override;
     void onRender(ICanvas& c, const UiModel& m) override;
+    bool showsClock() const override { return false; }
 
 private:
     void adjust(int delta, TickMs now);

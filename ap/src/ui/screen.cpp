@@ -28,17 +28,42 @@ const char* formatPace(uint16_t secPerKm, char* buf, std::size_t len) {
 }
 
 // Fixed part of the template method: same chrome on every screen.
-void Screen::drawStatusBar(ICanvas& c, const UiModel& m) {
-    char buf[8];
-    std::snprintf(buf, sizeof buf, "%02u:%02u", static_cast<unsigned>(m.time.hour), static_cast<unsigned>(m.time.minute));
+//
+// Layout, symmetric around the centre:   GPS ●  [hh:mm]  ● HR  L
+// The dots carry the state (colour), the labels say what the dot is.
+void Screen::drawStatusBar(ICanvas& c, const UiModel& m, bool clock) {
+    constexpr int16_t kY = 26;
     const int16_t cx = static_cast<int16_t>(c.width() / 2);
-    c.drawText(cx, 20, buf, Font::Small, Color::LightGray, Align::Center);
+    // Half-width kept free in the middle: room for the clock, or just a small gap.
+    const int16_t gap = clock ? 32 : 6;
 
-    if (m.activity.state != ActivityState::Idle) {
-        c.fillCircle(static_cast<int16_t>(cx - 34), 20, 4, m.activity.gpsFix ? Color::Green : Color::Red);
+    if (clock) {
+        char buf[8];
+        std::snprintf(buf, sizeof buf, "%02u:%02u", static_cast<unsigned>(m.time.hour),
+                      static_cast<unsigned>(m.time.minute));
+        c.drawText(cx, kY, buf, Font::Small, Color::LightGray, Align::Center);
     }
-    c.fillCircle(static_cast<int16_t>(cx + 34), 20, 4, m.hrValid ? zoneColor(m.hrZone) : Color::DarkGray);
-    if (m.keyLocked) c.drawText(static_cast<int16_t>(cx + 48), 20, "L", Font::Small, Color::Yellow, Align::Center);
+
+    const int16_t dotL = static_cast<int16_t>(cx - gap - 4);
+    const int16_t dotR = static_cast<int16_t>(cx + gap + 4);
+    const bool gps = m.activity.state != ActivityState::Idle;
+    if (gps) {
+        c.fillCircle(dotL, kY, 3, m.activity.gpsFix ? Color::Green : Color::Red);
+        c.drawText(static_cast<int16_t>(dotL - 6), kY, "GPS", Font::Small, Color::Gray, Align::Right);
+    }
+    c.fillCircle(dotR, kY, 3, m.hrValid ? zoneColor(m.hrZone) : Color::DarkGray);
+    c.drawText(static_cast<int16_t>(dotR + 6), kY, "HR", Font::Small, Color::Gray, Align::Left);
+
+    if (m.keyLocked) {
+        // Without the clock the row is narrow: lock goes after HR. With the
+        // clock the right side is too close to the round edge: it goes left.
+        if (!clock) {
+            c.drawText(static_cast<int16_t>(dotR + 28), kY, "L", Font::Small, Color::Yellow, Align::Left);
+        } else {
+            c.drawText(static_cast<int16_t>(gps ? dotL - 40 : dotL + 3), kY, "L", Font::Small, Color::Yellow,
+                       Align::Right);
+        }
+    }
 }
 
 }  // namespace ap

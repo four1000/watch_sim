@@ -101,6 +101,33 @@ TEST_F(App, FullRunFlowThroughKeys) {
     EXPECT_STREQ(app.overlayTitle(), "SAVED");
 }
 
+TEST_F(App, ClockHiddenInsideRunAndSettings) {
+    auto clockShown = [&] {
+        app.render(canvas);
+        return canvas.shows("08:42");
+    };
+    EXPECT_TRUE(clockShown()) << "watch face";
+    press(KeyId::Start);
+    EXPECT_EQ(top(), "ACTIVITY");
+    EXPECT_TRUE(clockShown()) << "activity menu still shows the time";
+
+    press(KeyId::Down);
+    press(KeyId::Start);
+    EXPECT_EQ(top(), "Settings");
+    EXPECT_FALSE(clockShown()) << "settings";
+    press(KeyId::Back);
+    press(KeyId::Up);
+
+    press(KeyId::Start);  // Run
+    EXPECT_EQ(top(), "ActivityData");
+    EXPECT_FALSE(clockShown()) << "activity data (Ready)";
+    press(KeyId::Start);
+    EXPECT_FALSE(clockShown()) << "activity data (Running)";
+    press(KeyId::Start);
+    EXPECT_EQ(top(), "PAUSED");
+    EXPECT_FALSE(clockShown()) << "pause menu is inside the activity";
+}
+
 TEST_F(App, ResumeFromPauseMenuReturnsToDataScreen) {
     press(KeyId::Start);
     press(KeyId::Start);

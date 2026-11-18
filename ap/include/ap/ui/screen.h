@@ -25,7 +25,7 @@ public:
     void render(ICanvas& c, const UiModel& m) {
         c.clear(Color::Black);
         onRender(c, m);
-        if (showsStatusBar()) drawStatusBar(c, m);
+        if (showsStatusBar()) drawStatusBar(c, m, showsClock());
     }
 
     virtual const char* name() const = 0;
@@ -44,11 +44,14 @@ protected:
     virtual bool onGesture(const GestureEvent& e) = 0;
     virtual void onRender(ICanvas& c, const UiModel& m) = 0;
     virtual bool showsStatusBar() const { return true; }
+    // Time of day in the status bar. Off inside an activity or settings, where
+    // the space belongs to the task; the GPS / HR / lock indicators stay.
+    virtual bool showsClock() const { return true; }
 
     TickMs enteredAt() const { return m_enteredAt; }
 
 private:
-    static void drawStatusBar(ICanvas& c, const UiModel& m);
+    static void drawStatusBar(ICanvas& c, const UiModel& m, bool clock);
     TickMs m_enteredAt = 0;
 };
 
