@@ -8,16 +8,9 @@
 
 namespace ap {
 
-// Pure function: zone 0..5 for `bpm` given max HR (Z1 starts at 50 %).
 uint8_t hrZoneFor(uint8_t bpm, uint8_t maxHr);
-// Lower bound (bpm) of zone 1..5.
 uint8_t hrZoneLowerBound(uint8_t zone, uint8_t maxHr);
 
-// Observer of HR samples. Turns a noisy bpm stream into:
-//   HrZoneChanged - with hysteresis, so 139/140/139 does not flicker Z2/Z3
-//   HrAlert       - only while an activity is Running, only after the HR has
-//                   been out of the target zone for kDebounceMs, then at most
-//                   once per kRealertMs while it stays out.
 class HrZoneMonitor final : private IEventListener {
 public:
     static constexpr uint8_t kHysteresisBpm = 2;
@@ -56,5 +49,4 @@ private:
 
     Subscription m_sub;
 };
-
-}  // namespace ap
+}

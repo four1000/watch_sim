@@ -11,7 +11,7 @@ bool SimGps::start() {
     std::lock_guard<std::mutex> lock(m_sim.m_mutex);
     if (!m_sim.m_gpsOn) {
         m_sim.m_gpsOn = true;
-        m_sim.m_gpsStartPending = true;  // acquisition timer starts at the next step()
+        m_sim.m_gpsStartPending = true;
     }
     return true;
 }
@@ -86,7 +86,6 @@ void SensorSimulator::emit(ap::TickMs now) {
         m_last = now;
         std::normal_distribution<double> noise(0.0, 1.0);
 
-        // HR follows the slider with a first-order lag (~5 s) plus noise.
         const double target = static_cast<double>(m_world.targetHr.load());
         m_hrValue += (target - m_hrValue) * std::min(1.0, dt / 5.0) + noise(m_rng) * 0.8;
         if (m_hrOn) {
@@ -96,8 +95,6 @@ void SensorSimulator::emit(ap::TickMs now) {
             hr.bpm = hr.valid ? static_cast<uint8_t>(std::clamp(std::lround(m_hrValue), 30L, 220L)) : 0;
         }
 
-        // The odometer keeps counting while the GPS is on, like a real service,
-        // and wraps modulo 2^32 (fmod keeps the double in range).
         if (m_gpsOn) {
             sendGps = true;
             const double speedDmS = m_world.speedKmh.load() * 10000.0 / 3600.0;
@@ -110,10 +107,9 @@ void SensorSimulator::emit(ap::TickMs now) {
             gps.accuracyM = static_cast<uint16_t>(gps.hasFix ? 3 + (m_rng() % 6) : 999);
         }
     }
-    // Post outside our lock: the sink has its own (short) critical section.
     if (m_sink == nullptr) return;
     if (sendHr) m_sink->postHr(hr);
     if (sendGps) m_sink->postGps(gps);
 }
 
-}  // namespace sim
+}

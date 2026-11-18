@@ -1,9 +1,5 @@
 #pragma once
 
-// Simulator implementations of the AP service interfaces.
-// This layer may use the full C++ library (threads, heap, iostreams):
-// it stands in for drivers and the RTOS, not for application code.
-
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -17,9 +13,6 @@
 
 namespace sim {
 
-// ---- Monotonic tick ---------------------------------------------------------------
-// `startTick` lets the simulator start close to UINT32_MAX to show that the
-// AP layer survives the 49-day tick wrap (--wrap).
 class SimTick {
 public:
     explicit SimTick(uint32_t startTick = 0) : m_start(std::chrono::steady_clock::now()), m_offset(startTick) {}
@@ -33,7 +26,6 @@ private:
     uint32_t m_offset;
 };
 
-// ---- OSAL --------------------------------------------------------------------------
 class StdMutex final : public ap::osal::IMutex {
 public:
     void lock() override { m_m.lock(); }
@@ -43,11 +35,9 @@ private:
     std::mutex m_m;
 };
 
-// ---- Wall clock: real local time, or a fixed start advanced by the tick (scripts) ---
 class SimWallClock final : public ap::IWallClock {
 public:
     SimWallClock() = default;
-    // Deterministic clock for scripted runs: base time + elapsed virtual ticks.
     SimWallClock(const ap::LocalTime& base, const ap::TickMs* tick) : m_fixed(true), m_base(base), m_tick(tick) {}
 
     ap::LocalTime now() const override;
@@ -58,7 +48,6 @@ private:
     const ap::TickMs* m_tick = nullptr;
 };
 
-// ---- Outputs -------------------------------------------------------------------------
 class SimVibrator final : public ap::IVibrator {
 public:
     void vibrate(ap::VibePattern p) override {
@@ -82,7 +71,6 @@ private:
     std::atomic<bool> m_on{false};
 };
 
-// ---- Storage: CSV file per activity ----------------------------------------------------
 class CsvActivityRecorder final : public ap::IActivityRecorder {
 public:
     explicit CsvActivityRecorder(std::string dir) : m_dir(std::move(dir)) {}
@@ -92,7 +80,6 @@ public:
     bool finish(const ap::ActivitySummary& summary) override;
     void discard() override;
 
-    // Fault injection from the dev panel.
     std::atomic<bool> failBegin{false};
     std::atomic<bool> failFinish{false};
     std::string lastFile() const;
@@ -105,5 +92,4 @@ private:
     mutable std::mutex m_fileMutex;
     std::string m_lastFile;
 };
-
-}  // namespace sim
+}

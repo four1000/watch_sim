@@ -12,7 +12,7 @@ void OverlayManager::attach() {
 bool OverlayManager::handle(const GestureEvent& e) {
     if (!modal()) return false;
     if (e.gesture == Gesture::Short) hide();
-    return true;  // a modal overlay swallows every key while it is up
+    return true;
 }
 
 void OverlayManager::onEvent(const Event& e) {
@@ -77,7 +77,6 @@ void OverlayManager::onTimer(uint8_t, TickMs) { hide(); }
 
 void OverlayManager::show(TickMs now, const char* title, const char* detail, Color color, bool modal,
                           uint32_t durationMs) {
-    // A new pop-up replaces the current one; a toast never hides a modal alert.
     if (this->modal() && !modal) return;
     std::snprintf(m_title, sizeof m_title, "%s", title);
     std::snprintf(m_detail, sizeof m_detail, "%s", detail);
@@ -111,4 +110,4 @@ void OverlayManager::render(ICanvas& c, const UiModel&) const {
     }
 }
 
-}  // namespace ap
+}

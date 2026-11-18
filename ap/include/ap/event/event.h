@@ -13,16 +13,16 @@
 namespace ap {
 
 enum class EventType : uint8_t {
-    Gesture,               // input  -> router
-    HrSample,              // sensor -> metrics, zone monitor, UI
-    GpsSample,             // sensor -> metrics, UI
-    SecondTick,            // clock  -> metrics, UI refresh
-    ActivityStateChanged,  // session -> flow coordinator, zone monitor, UI
-    LapCompleted,          // session -> overlay (toast + vibrate)
-    HrZoneChanged,         // zone monitor -> UI
-    HrAlert,               // zone monitor -> overlay
-    SettingsChanged,       // settings -> zone monitor
-    KeyLockChanged,        // key lock -> overlay
+    Gesture,
+    HrSample,
+    GpsSample,
+    SecondTick,
+    ActivityStateChanged,
+    LapCompleted,
+    HrZoneChanged,
+    HrAlert,
+    SettingsChanged,
+    KeyLockChanged,
     Count
 };
 static_assert(static_cast<std::size_t>(EventType::Count) <= 32, "topic mask is 32 bits");
@@ -38,9 +38,6 @@ struct ActivityStateChange {
     ActivityOutcome outcome;
 };
 
-// Tagged union: fixed size (no heap, no std::function, no RTTI) so events
-// can sit in a fixed-capacity queue and be copied with memcpy.
-// Use the make* factories; read only the member matching `type`.
 struct Event {
     EventType type;
     TickMs timestampMs;
@@ -71,7 +68,5 @@ static_assert(sizeof(Event) <= 24, "keep events small: the queue is statically a
 
 const char* toString(EventType t);
 
-// Human-readable one-liner (dev panel trace / logs). Returns `buf`.
 const char* describe(const Event& e, char* buf, std::size_t len);
-
-}  // namespace ap
+}

@@ -7,13 +7,8 @@
 
 namespace ap {
 
-// Dark: black background, light text (backlight off).
-// Light: white background, dark text (backlight on).
 enum class Theme : uint8_t { Dark, Light };
 
-// Maps a colour as a screen asked for it (written for the dark theme) to the
-// colour to draw in `t`. Neutral colours swap ends; accents that would vanish
-// on white (yellow, cyan, the light-grey zone 1) get a darker substitute.
 constexpr Color themed(Color c, Theme t) {
     if (t == Theme::Dark) return c;
     switch (c) {
@@ -24,14 +19,15 @@ constexpr Color themed(Color c, Theme t) {
         case Color::Yellow:    return Color::Orange;
         case Color::Cyan:      return Color::Blue;
         case Color::Zone1:     return Color::Gray;
+        case Color::Zone1Dim:  return themed(Color::Zone1, t);
+        case Color::Zone2Dim:  return Color::Zone2;
+        case Color::Zone3Dim:  return Color::Zone3;
+        case Color::Zone4Dim:  return Color::Zone4;
+        case Color::Zone5Dim:  return Color::Zone5;
         default:               return c;
     }
 }
 
-// Decorator: an ICanvas that forwards to another ICanvas through the theme
-// palette. Screens keep drawing with one set of colours and never learn that
-// the backlight exists; the theme is chosen once per frame in WatchApp::render.
-// Lives on the stack for one frame, so no heap and no lifetime question.
 class ThemedCanvas final : public ICanvas {
 public:
     ThemedCanvas(ICanvas& inner, Theme theme) : m_inner(inner), m_theme(theme) {}
@@ -62,5 +58,4 @@ private:
     ICanvas& m_inner;
     Theme m_theme;
 };
-
-}  // namespace ap
+}

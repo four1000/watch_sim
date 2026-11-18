@@ -6,7 +6,7 @@ namespace ap {
 
 uint8_t hrZoneLowerBound(uint8_t zone, uint8_t maxHr) {
     if (zone == 0) return 0;
-    const unsigned pct = 40u + 10u * std::min<unsigned>(zone, kZoneCount);  // Z1=50% ... Z5=90%
+    const unsigned pct = 40u + 10u * std::min<unsigned>(zone, kZoneCount);
     return static_cast<uint8_t>((maxHr * pct + 50u) / 100u);
 }
 
@@ -36,7 +36,6 @@ void HrZoneMonitor::onEvent(const Event& e) {
             if (!m_activityRunning) resetAlert();
             break;
         case EventType::SettingsChanged:
-            // Thresholds moved: recompute without hysteresis and restart the debounce.
             if (m_valid) {
                 const uint8_t z = hrZoneFor(m_bpm, m_settings.settings().maxHr);
                 if (z != m_zone) {
@@ -53,7 +52,6 @@ void HrZoneMonitor::onEvent(const Event& e) {
 
 void HrZoneMonitor::onSample(const HrSample& s) {
     if (!s.valid) {
-        // Sensor lost: no zone, and no alert based on stale data.
         m_valid = false;
         m_bpm = 0;
         resetAlert();
@@ -71,8 +69,6 @@ void HrZoneMonitor::onSample(const HrSample& s) {
 
 void HrZoneMonitor::updateZone(TickMs t) {
     const uint8_t maxHr = m_settings.settings().maxHr;
-    // Hysteresis: move up only if bpm clears the boundary by H, down only if it
-    // falls below it by H. Inside the band the current zone is kept.
     const uint8_t upZone = hrZoneFor(static_cast<uint8_t>(m_bpm > kHysteresisBpm ? m_bpm - kHysteresisBpm : 0), maxHr);
     const uint8_t downZone = hrZoneFor(static_cast<uint8_t>(std::min(255, m_bpm + kHysteresisBpm)), maxHr);
     uint8_t z = m_zone;
@@ -109,4 +105,4 @@ void HrZoneMonitor::checkAlert(TickMs t) {
     m_bus.publish(Event::makeAlert(t, info));
 }
 
-}  // namespace ap
+}

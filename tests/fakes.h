@@ -1,9 +1,5 @@
 #pragma once
 
-// Test doubles for every service the AP layer depends on.
-// Because the AP layer owns these interfaces, the whole application can run
-// in a unit test: no window, no thread, no clock.
-
 #include <string>
 #include <vector>
 
@@ -71,8 +67,6 @@ public:
     int locks = 0, unlocks = 0;
 };
 
-// Records draw calls so tests can assert *what* a screen shows,
-// independent of any graphics library.
 class FakeCanvas final : public ap::ICanvas {
 public:
     int16_t width() const override { return 240; }
@@ -98,7 +92,6 @@ public:
         }
         return false;
     }
-    // Colour of the first text containing `s`; Magenta-like sentinel (Zone5) if absent.
     ap::Color colorOf(const std::string& s) const {
         for (std::size_t i = 0; i < texts.size(); ++i) {
             if (texts[i].find(s) != std::string::npos) return textColors[i];
@@ -110,5 +103,4 @@ public:
     ap::Color background = ap::Color::Zone5;
     int clears = 0;
 };
-
-}  // namespace fakes
+}

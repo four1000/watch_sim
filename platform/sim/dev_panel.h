@@ -17,21 +17,18 @@ namespace sim {
 struct SensorWorld;
 class CsvActivityRecorder;
 
-// Collects the last N dispatched events for the trace view. Called on the AP
-// thread (inside EventBus::dispatch) - the same thread that draws the panel.
 class EventTraceLog final : public ap::IEventTrace {
 public:
     static constexpr std::size_t kLines = 9;
     void onDispatch(const ap::Event& e, std::size_t receivers) override;
     const std::deque<std::string>& lines() const { return m_lines; }
-    bool showSamples = false;  // HR/GPS/tick events are frequent; hidden by default
+    bool showSamples = false;
     bool printToStdout = false;
 
 private:
     std::deque<std::string> m_lines;
 };
 
-// Right-hand side of the window: sensor knobs, fault injection, AP state, trace.
 class DevPanel {
 public:
     static constexpr int kWidth = 400;
@@ -49,4 +46,4 @@ private:
     double m_speed = 0.0;
 };
 
-}  // namespace sim
+}

@@ -1,16 +1,3 @@
-// =============================================================================
-// Composition root of the simulator.
-//
-// This is the only file that knows every concrete type: it creates the
-// platform services (simulated drivers, storage, outputs), injects them into
-// the AP layer (ap::WatchApp), and runs the main loop.
-//
-//   watch_sim.exe                      interactive window
-//   watch_sim.exe --wrap               start the tick 30 s before the 32-bit wrap
-//   watch_sim.exe --trace              also print the event trace to the console
-//   watch_sim.exe --script demo.keys --out shots
-//                                      headless, virtual time, writes PNGs
-// =============================================================================
 
 #if defined(_DEBUG)
 #pragma message("watch_sim: build RelWithDebInfo/Release - third_party ships only the release opencv_world DLL")
@@ -40,12 +27,12 @@
 namespace {
 
 constexpr const char* kWindow = "Fitness Watch Simulator - AP layer";
-constexpr int kWatchMargin = 24;  // room for the left buttons
+constexpr int kWatchMargin = 24;
 const cv::Point kWatchOrigin{kWatchMargin, 0};
 constexpr int kPanelX = sim::WatchFrame::kSize + 2 * kWatchMargin;
 constexpr int kFrameW = kPanelX + sim::DevPanel::kWidth;
 constexpr int kFrameH = sim::WatchFrame::kSize;
-constexpr uint32_t kOdometerStart = 0xFFFF0000u;  // near wrap on purpose: the AP layer must handle it
+constexpr uint32_t kOdometerStart = 0xFFFF0000u;
 constexpr uint32_t kWrapStartTick = 0xFFFFFFFFu - 30000u;
 
 struct Options {
@@ -88,8 +75,6 @@ uint32_t vibeDurationMs(ap::VibePattern p) {
 
 using KeyLevels = std::array<bool, ap::kKeyCount>;
 
-// Everything the simulator owns. Declaration order = construction order;
-// the sensor thread is stopped explicitly before anything is destroyed.
 struct Simulator {
     explicit Simulator(uint32_t odometerStart) : sensors(world, odometerStart) {}
 
@@ -100,14 +85,12 @@ struct Simulator {
     sim::SimBacklight backlight;
     sim::CsvActivityRecorder recorder{"activities"};
     std::unique_ptr<sim::SimWallClock> clock;
-    std::unique_ptr<ap::WatchApp> app;  // heap is fine here: platform code, created once
+    std::unique_ptr<ap::WatchApp> app;
 
     sim::OpenCvCanvas canvas{240, 2};
     sim::WatchFrame watch;
     sim::EventTraceLog trace;
     std::unique_ptr<sim::DevPanel> panel;
-    // Parentheses, not braces: cv::Mat{a, b, c} picks the initializer_list
-    // constructor and builds a 3x1 matrix.
     cv::Mat frame = cv::Mat(kFrameH, kFrameW, CV_8UC3);
 
     uint32_t vibeSeen = 0;
@@ -123,7 +106,6 @@ struct Simulator {
         panel = std::make_unique<sim::DevPanel>(world, recorder, trace);
     }
 
-    // Level -> edge conversion (what a key driver does with GPIO interrupts).
     void setKeys(const KeyLevels& levels, ap::TickMs now) {
         for (std::size_t i = 0; i < levels.size(); ++i) {
             if (levels[i] == keyLevel[i]) continue;
@@ -152,7 +134,6 @@ struct Simulator {
     }
 };
 
-// ---- Interactive mode ----------------------------------------------------------------
 
 int runInteractive(const Options& opt) {
     sim::SimTick tick(opt.wrap ? kWrapStartTick : 0u);
@@ -162,7 +143,7 @@ int runInteractive(const Options& opt) {
     s.app->init(tick.now());
 
     cvui::init(kWindow);
-    s.sensors.runThread(tick);  // the sensor "driver" thread posts into the AP inbox
+    s.sensors.runThread(tick);
     const HWND hwnd = FindWindowA(nullptr, kWindow);
 
     for (;;) {
@@ -192,18 +173,11 @@ int runInteractive(const Options& opt) {
         if (key == 27) break;
         if (cv::getWindowProperty(kWindow, cv::WND_PROP_VISIBLE) < 1.0) break;
     }
-    s.sensors.stopThread();  // before the app it posts into is destroyed
+    s.sensors.stopThread();
     cv::destroyAllWindows();
     return 0;
 }
 
-// ---- Scripted mode -------------------------------------------------------------------
-// Deterministic: virtual time, sensors stepped synchronously, fixed wall clock.
-//
-//   wait <ms> | press <KEY> [holdMs] | hold <KEY> [ms] | double <KEY>
-//   hr <bpm>|on|off | speed <kmh> | gps on|off | fault gps|storage|save on|off
-//   shot <file.png>
-// KEY = LIGHT UP DOWN START BACK
 
 int runScript(const Options& opt) {
     std::ifstream in(opt.script);
@@ -219,7 +193,7 @@ int runScript(const Options& opt) {
     s.trace.printToStdout = true;
     s.build(std::make_unique<sim::SimWallClock>(ap::LocalTime{2026, 11, 18, 3, 8, 42, 0}, &elapsed));
     s.app->init(now);
-    cvui::init(kWindow, -1, false, true);  // headless: widgets draw into the frame, no window
+    cvui::init(kWindow, -1, false, true);
 
     auto advance = [&](uint32_t ms) {
         for (uint32_t t = 0; t < ms; t += 20) {
@@ -254,7 +228,7 @@ int runScript(const Options& opt) {
             uint32_t hold = (cmd == "hold") ? 1000u : 80u;
             if (uint32_t h = 0; ss >> h) hold = h;
             press(k, hold);
-            advance(340);  // let the double-click window expire
+            advance(340);
         } else if (cmd == "double" && parseKey(arg, k)) {
             press(k, 60);
             press(k, 60);
@@ -289,7 +263,7 @@ int runScript(const Options& opt) {
     return 0;
 }
 
-}  // namespace
+}
 
 int main(int argc, char** argv) {
     const Options opt = parse(argc, argv);

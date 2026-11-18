@@ -9,9 +9,6 @@
 
 namespace ap {
 
-// First link of the chain. Double-press LIGHT toggles the key lock; while
-// locked, every other gesture is swallowed here, so no screen has to know
-// that a lock exists.
 class KeyLockHandler final : public IInputHandler {
 public:
     explicit KeyLockHandler(EventBus& bus) : m_bus(bus) {}
@@ -32,9 +29,6 @@ private:
     bool m_locked = false;
 };
 
-// Last link of the chain: global fallbacks that apply on every screen unless
-// a screen consumed the key first. LIGHT short toggles the backlight, which
-// switches itself off after kTimeoutMs (soft timer, no blocking wait).
 class BacklightHandler final : public IInputHandler, private ITimerListener {
 public:
     static constexpr uint32_t kTimeoutMs = 8000;
@@ -63,5 +57,4 @@ private:
     TimerHandle m_timer{};
     bool m_on = false;
 };
-
-}  // namespace ap
+}

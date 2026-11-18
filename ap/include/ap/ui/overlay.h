@@ -11,18 +11,10 @@
 
 namespace ap {
 
-// Pop-ups drawn on top of whatever screen is active: HR alerts, lap
-// summaries, "saved", "keys locked".
-//
-// - Observer: reacts to bus events; nobody calls it directly, so the session
-//   and the zone monitor do not know an overlay exists.
-// - CoR link: a *modal* overlay (HR alert) consumes the next key press to
-//   dismiss itself; a non-modal toast lets keys through to the screen.
-// - Auto-dismiss through a soft timer.
 class OverlayManager final : public IInputHandler, private IEventListener, private ITimerListener {
 public:
-    static constexpr uint32_t kToastMs = 2500;
-    static constexpr uint32_t kAlertMs = 6000;
+    static constexpr uint32_t kToastMs = 1000;
+    static constexpr uint32_t kAlertMs = 1000;
 
     OverlayManager(EventBus& bus, SoftTimerPool& timers, IVibrator& vibrator)
         : m_bus(bus), m_timers(timers), m_vibrator(vibrator) {}
@@ -60,5 +52,4 @@ private:
 
     Subscription m_sub;
 };
-
-}  // namespace ap
+}

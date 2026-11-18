@@ -15,7 +15,7 @@ const char* formatDuration(uint32_t ms, char* buf, std::size_t len) {
 }
 
 const char* formatDistanceKm(uint32_t dm, char* buf, std::size_t len) {
-    const uint32_t tenMetres = dm / 100u;  // truncate, like a watch does
+    const uint32_t tenMetres = dm / 100u;
     std::snprintf(buf, len, "%lu.%02lu", static_cast<unsigned long>(tenMetres / 100u),
                   static_cast<unsigned long>(tenMetres % 100u));
     return buf;
@@ -27,14 +27,9 @@ const char* formatPace(uint16_t secPerKm, char* buf, std::size_t len) {
     return buf;
 }
 
-// Fixed part of the template method: same chrome on every screen.
-//
-// Layout, symmetric around the centre:   GPS ●  [hh:mm]  ● HR  L
-// The dots carry the state (colour), the labels say what the dot is.
 void Screen::drawStatusBar(ICanvas& c, const UiModel& m, bool clock) {
     constexpr int16_t kY = 26;
     const int16_t cx = static_cast<int16_t>(c.width() / 2);
-    // Half-width kept free in the middle: room for the clock, or just a small gap.
     const int16_t gap = clock ? 32 : 6;
 
     if (clock) {
@@ -55,8 +50,6 @@ void Screen::drawStatusBar(ICanvas& c, const UiModel& m, bool clock) {
     c.drawText(static_cast<int16_t>(dotR + 6), kY, "HR", Font::Small, Color::Gray, Align::Left);
 
     if (m.keyLocked) {
-        // Without the clock the row is narrow: lock goes after HR. With the
-        // clock the right side is too close to the round edge: it goes left.
         if (!clock) {
             c.drawText(static_cast<int16_t>(dotR + 28), kY, "L", Font::Small, Color::Yellow, Align::Left);
         } else {
@@ -66,4 +59,4 @@ void Screen::drawStatusBar(ICanvas& c, const UiModel& m, bool clock) {
     }
 }
 
-}  // namespace ap
+}

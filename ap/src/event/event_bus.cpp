@@ -4,7 +4,6 @@
 
 namespace ap {
 
-// ---- Subscription ---------------------------------------------------------------
 
 Subscription::Subscription(Subscription&& o) noexcept
     : m_bus(o.m_bus), m_slot(o.m_slot), m_generation(o.m_generation) {
@@ -29,7 +28,6 @@ void Subscription::reset() {
     }
 }
 
-// ---- EventBus ---------------------------------------------------------------------
 
 Subscription EventBus::subscribe(IEventListener& l, TopicMask mask) {
     if (mask == 0) return Subscription{};
@@ -48,8 +46,6 @@ void EventBus::unsubscribe(uint8_t slot, uint8_t generation) {
     if (slot >= m_slots.size()) return;
     Slot& s = m_slots[slot];
     if (s.generation != generation || s.listener == nullptr) return;
-    // Tombstone: safe even while dispatch() is iterating, because dispatch
-    // re-reads `listener` for every slot and skips nullptr.
     s.listener = nullptr;
     s.mask = 0;
     s.armed = false;
@@ -63,7 +59,7 @@ bool EventBus::publish(const Event& e) {
 }
 
 std::size_t EventBus::dispatch(std::size_t budget) {
-    if (m_dispatching) return 0;  // re-entrant call from a listener: ignore
+    if (m_dispatching) return 0;
     m_dispatching = true;
     std::size_t delivered = 0;
     while (delivered < budget) {
@@ -78,7 +74,6 @@ std::size_t EventBus::dispatch(std::size_t budget) {
             }
         }
         if (m_trace != nullptr) m_trace->onDispatch(*e, receivers);
-        // Listeners subscribed while this event was delivered start now.
         for (Slot& s : m_slots) {
             if (s.listener != nullptr) s.armed = true;
         }
@@ -94,4 +89,4 @@ std::size_t EventBus::subscribers() const {
     return n;
 }
 
-}  // namespace ap
+}

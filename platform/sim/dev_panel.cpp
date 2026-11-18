@@ -32,12 +32,9 @@ void DevPanel::draw(cv::Mat& frame, int x, const ap::WatchApp& app, ap::TickMs n
     cvui::text(frame, x + 14, y, "AP LAYER DEV PANEL", 0.55, accent);
     y += 28;
 
-    // ---- Sensors ---------------------------------------------------------------
     cvui::text(frame, x + 14, y, "Sensors (simulated drivers, 1 Hz thread)", 0.4, dim);
     y += 20;
     cvui::text(frame, x + 14, y + 16, "HR bpm", 0.42, text);
-    // Read the world first, write back only on user change: scripts (and the
-    // sensor thread) may set the world too, and the panel must not override them.
     m_hr = m_world.targetHr;
     if (cvui::trackbar(frame, x + 90, y, 290, &m_hr, 40, 200, 1, "%.0Lf", cvui::TRACKBAR_HIDE_SEGMENT_LABELS, 1)) {
         m_world.targetHr = m_hr;
@@ -69,7 +66,6 @@ void DevPanel::draw(cv::Mat& frame, int x, const ap::WatchApp& app, ap::TickMs n
     m_recorder.failFinish = failFinish;
     y += 32;
 
-    // ---- AP state ----------------------------------------------------------------
     cvui::text(frame, x + 14, y, "AP state", 0.4, dim);
     y += 18;
     const auto& snap = app.model().activity;
@@ -91,7 +87,6 @@ void DevPanel::draw(cv::Mat& frame, int x, const ap::WatchApp& app, ap::TickMs n
     if (!file.empty()) cvui::printf(frame, x + 14, y, 0.38, dim, "Saved: %s", file.c_str());
     y += 26;
 
-    // ---- Event trace ------------------------------------------------------------
     cvui::text(frame, x + 14, y, "EventBus trace  (time  event  ->receivers)", 0.4, dim);
     y += 18;
     for (const auto& line : m_trace.lines()) {
@@ -99,10 +94,9 @@ void DevPanel::draw(cv::Mat& frame, int x, const ap::WatchApp& app, ap::TickMs n
         y += 15;
     }
 
-    // ---- Help -----------------------------------------------------------------------
     const int hy = frame.rows - 44;
     cvui::text(frame, x + 14, hy, "Keys: Space=LIGHT  Up/Down  Enter=START  Backspace=BACK", 0.38, dim);
     cvui::text(frame, x + 14, hy + 16, "or hold the buttons with the mouse.  Esc = quit", 0.38, dim);
 }
 
-}  // namespace sim
+}

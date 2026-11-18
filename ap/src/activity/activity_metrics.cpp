@@ -34,7 +34,7 @@ void ActivityMetrics::resume(TickMs now) {
     if (m_running) return;
     m_running = true;
     m_segmentStart = now;
-    m_hasBase = false;  // distance covered while paused must not count
+    m_hasBase = false;
 }
 
 uint32_t ActivityMetrics::elapsedMs(TickMs now) const {
@@ -66,10 +66,8 @@ void ActivityMetrics::onGps(const GpsSample& s) {
         m_lastOdometerDm = s.odometerDm;
         m_lastGpsT = s.timestampMs;
     } else {
-        // Modulo-2^32 subtraction: correct across odometer wrap-around.
         const uint32_t delta = s.odometerDm - m_lastOdometerDm;
         const uint32_t dtMs = ap::elapsedMs(s.timestampMs, m_lastGpsT);
-        // Glitch filter: reject jumps faster than kMaxSpeed (and re-baseline).
         const uint64_t limitDm = (static_cast<uint64_t>(dtMs) * kMaxSpeedDmPerS) / 1000u + 1u;
         if (delta <= limitDm) m_distanceDm += delta;
         m_lastOdometerDm = s.odometerDm;
@@ -91,8 +89,7 @@ void ActivityMetrics::onHr(const HrSample& s) {
 }
 
 uint16_t ActivityMetrics::paceSecKm(uint32_t durationMs, uint32_t distanceDm) {
-    if (distanceDm < 20) return 0;  // < 2 m: standing still, pace is meaningless
-    // sec/km = (ms / 1000) / (dm / 10000) = ms * 10 / dm
+    if (distanceDm < 20) return 0;
     const uint64_t pace = (static_cast<uint64_t>(durationMs) * 10u) / distanceDm;
     return static_cast<uint16_t>(std::min<uint64_t>(pace, kMaxPaceSecKm));
 }
@@ -141,4 +138,4 @@ void ActivityMetrics::fill(TickMs now, ActivitySnapshot& out) const {
     out.lastLap = m_lastLap;
 }
 
-}  // namespace ap
+}

@@ -22,21 +22,6 @@
 
 namespace ap {
 
-// The application layer as one Active Object.
-//
-//   other threads / ISRs           AP thread (the only one touching AP state)
-//   --------------------           ------------------------------------------
-//   postKey() / postHr() --mutex--> inbox --> step(now):
-//   postGps()                                 1. drain inbox -> recognizer / bus
-//                                             2. gesture recognizer poll
-//                                             3. soft timers, 1 s tick
-//                                             4. bus.dispatch() (run-to-completion)
-//                                           render(canvas) when dirty
-//
-// Ownership: every AP object is a member (composition, no heap). Services are
-// injected by reference by the platform composition root (main.cpp / tests).
-// Member order matters: m_bus is declared first, so it is destroyed last,
-// after every Subscription held by the members below.
 class WatchApp final : public ISensorSink, private IEventListener {
 public:
     struct Services {
@@ -56,21 +41,16 @@ public:
     WatchApp(const WatchApp&) = delete;
     WatchApp& operator=(const WatchApp&) = delete;
 
-    // Wires subscriptions and the input chain, starts the HR service, shows
-    // the watch face. All "allocation" of the system happens here.
     bool init(TickMs now);
 
-    // ---- Thread-safe producers (any context) -----------------------------------
     bool postKey(const KeyEvent& e);
     bool postHr(const HrSample& s) override;
     bool postGps(const GpsSample& s) override;
 
-    // ---- AP thread ------------------------------------------------------------
     void step(TickMs now);
     bool needsRender() const { return m_dirty; }
-    void render(ICanvas& c);  // builds the UiModel, draws stack + overlay, clears dirty
+    void render(ICanvas& c);
 
-    // ---- Introspection (dev panel, tests) -------------------------------------
     const UiModel& model() const { return m_model; }
     ActivityState activityState() const { return m_session.state(); }
     const char* topScreenName() const;
@@ -98,23 +78,20 @@ private:
 
     Services m_svc;
 
-    // ---- infrastructure (declared first: outlives everything below) ----------
     EventBus m_bus;
     SoftTimerPool m_timers;
-    RingBuffer<InboxMsg, kInboxCapacity> m_inbox;  // guarded by m_svc.inboxMutex
-    uint16_t m_inboxDropped = 0;                   // guarded by m_svc.inboxMutex
+    RingBuffer<InboxMsg, kInboxCapacity> m_inbox;
+    uint16_t m_inboxDropped = 0;
 
-    // ---- domain --------------------------------------------------------------
     GestureRecognizer m_gestures;
     InputRouter m_router;
     SettingsStore m_settings;
     ActivitySession m_session;
     HrZoneMonitor m_zones;
 
-    // ---- UI ------------------------------------------------------------------
     Navigator m_nav;
     MenuScreen m_activityMenu{"ACTIVITY"};
-    MenuScreen m_pauseMenu{"PAUSED", false};  // inside an activity: no clock
+    MenuScreen m_pauseMenu{"PAUSED", false};
     WatchFaceScreen m_watchFace;
     ActivityDataScreen m_dataScreen;
     SettingsScreen m_settingsScreen;
@@ -130,7 +107,6 @@ private:
     BacklightHandler m_backlight;
     ActivityFlowCoordinator m_flow;
 
-    // ---- presentation state --------------------------------------------------
     UiModel m_model;
     TickMs m_now = 0;
     TickMs m_nextSecond = 0;
@@ -139,5 +115,4 @@ private:
 
     Subscription m_sub;
 };
-
-}  // namespace ap
+}

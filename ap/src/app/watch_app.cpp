@@ -27,8 +27,6 @@ WatchApp::WatchApp(const Services& s)
 bool WatchApp::init(TickMs now) {
     if (m_initialized) return false;
 
-    // Order of subscription = order of delivery for the same event. The
-    // session updates metrics before the UI hears about the sample.
     m_session.attach();
     m_zones.attach();
     m_overlay.attach();
@@ -41,16 +39,15 @@ bool WatchApp::init(TickMs now) {
     m_pauseMenu.addItem("Save", m_cmdSave);
     m_pauseMenu.addItem("Discard", m_cmdDiscard);
 
-    // Chain of Responsibility, most specific / highest priority first.
     m_router.append(m_keyLock);
     m_router.append(m_overlay);
     m_router.append(m_nav);
     m_router.append(m_backlight);
 
-    m_gestures.setDoubleEnabled(KeyId::Light, true);  // double LIGHT = key lock
+    m_gestures.setDoubleEnabled(KeyId::Light, true);
 
     m_nav.resetTo(m_watchFace, now);
-    m_svc.hr.start();  // all-day HR; GPS is started only by an activity
+    m_svc.hr.start();
 
     m_now = now;
     m_nextSecond = static_cast<TickMs>(now + 1000u);
@@ -58,8 +55,6 @@ bool WatchApp::init(TickMs now) {
     m_dirty = true;
     return true;
 }
-
-// ---- producers ----------------------------------------------------------------------
 
 bool WatchApp::post(const InboxMsg& m) {
     osal::LockGuard lock(m_svc.inboxMutex);
@@ -94,11 +89,7 @@ uint16_t WatchApp::inboxDropped() const {
     return m_inboxDropped;
 }
 
-// ---- AP thread ----------------------------------------------------------------------
-
 void WatchApp::drainInbox() {
-    // Copy a bounded batch out under the lock, process it without the lock:
-    // producers are never blocked by AP processing.
     InboxMsg batch[kMaxInboxPerStep];
     std::size_t n = 0;
     {
@@ -129,13 +120,11 @@ void WatchApp::step(TickMs now) {
     while (const auto g = m_gestures.next()) m_bus.publish(Event::makeGesture(*g));
 
     m_timers.poll(now);
-    // The backlight switches the theme, so a change (key or timeout) needs a redraw.
     if (m_backlight.on() != m_model.backlightOn) m_dirty = true;
 
     if (timeReached(now, m_nextSecond)) {
         m_bus.publish(Event::makeSecondTick(now));
         m_nextSecond = static_cast<TickMs>(m_nextSecond + 1000u);
-        // After a long stall do not fire a burst of ticks; resynchronise.
         if (timeReached(now, m_nextSecond)) m_nextSecond = static_cast<TickMs>(now + 1000u);
     }
 
@@ -161,8 +150,6 @@ void WatchApp::buildModel() {
 
 void WatchApp::render(ICanvas& c) {
     buildModel();
-    // Backlight on -> white background, dark text. Screens are unaware of it:
-    // they draw through a decorator that swaps the palette.
     ThemedCanvas themed(c, m_model.backlightOn ? Theme::Light : Theme::Dark);
     m_nav.render(themed, m_model);
     m_overlay.render(themed, m_model);
@@ -174,4 +161,4 @@ const char* WatchApp::topScreenName() const {
     return s ? s->name() : "-";
 }
 
-}  // namespace ap
+}

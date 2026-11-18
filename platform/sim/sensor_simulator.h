@@ -12,7 +12,6 @@
 
 namespace sim {
 
-// Knobs set from the dev panel (UI thread) and read by the sensor thread.
 struct SensorWorld {
     std::atomic<int> targetHr{75};
     std::atomic<bool> hrWorn{true};
@@ -23,8 +22,6 @@ struct SensorWorld {
 
 class SensorSimulator;
 
-// Two thin adapters, because IGpsService and IHeartRateService both declare
-// start()/stop() and one class cannot implement both differently.
 class SimGps final : public ap::IGpsService {
 public:
     explicit SimGps(SensorSimulator& s) : m_sim(s) {}
@@ -45,10 +42,6 @@ private:
     SensorSimulator& m_sim;
 };
 
-// Produces 1 Hz HR and GPS samples like the real services would, and pushes
-// them into the AP layer through ap::ISensorSink - from its own thread in
-// interactive mode (proves the inbox is thread-safe), or synchronously via
-// step() in scripted mode (deterministic screenshots).
 class SensorSimulator {
 public:
     static constexpr uint32_t kPeriodMs = 1000;
@@ -59,13 +52,11 @@ public:
     SensorSimulator(const SensorSimulator&) = delete;
     SensorSimulator& operator=(const SensorSimulator&) = delete;
 
-    // Late binding breaks the construction cycle: WatchApp needs gps()/hr(),
-    // and the simulator needs WatchApp as its sink. Call before running.
     void connect(ap::ISensorSink& sink) { m_sink = &sink; }
 
-    void runThread(const SimTick& tick);  // interactive mode
+    void runThread(const SimTick& tick);
     void stopThread();
-    void step(ap::TickMs now);            // emits samples when a period has elapsed
+    void step(ap::TickMs now);
 
     SimGps& gps() { return m_gps; }
     SimHeartRate& hr() { return m_hr; }
@@ -81,7 +72,7 @@ private:
     SimGps m_gps{*this};
     SimHeartRate m_hr{*this};
 
-    std::mutex m_mutex;  // guards everything below (start/stop come from the AP thread)
+    std::mutex m_mutex;
     bool m_gpsOn = false;
     bool m_hrOn = false;
     ap::TickMs m_gpsStartedAt = 0;
@@ -97,4 +88,4 @@ private:
     bool m_quit = false;
 };
 
-}  // namespace sim
+}

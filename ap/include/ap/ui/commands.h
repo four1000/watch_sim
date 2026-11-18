@@ -6,9 +6,6 @@
 
 namespace ap {
 
-// "Call one IActivityControl request" as a command object.
-// One class covers Run / Resume / Save / Discard by binding a member-function
-// pointer, instead of four near-identical classes.
 class ActivityCommand final : public ICommand {
 public:
     using Request = bool (IActivityControl::*)(TickMs);
@@ -21,7 +18,6 @@ private:
     Request m_request;
 };
 
-// "Open this screen".
 class PushScreenCommand final : public ICommand {
 public:
     PushScreenCommand(Navigator& nav, Screen& target) : m_nav(nav), m_target(target) {}
@@ -31,5 +27,4 @@ private:
     Navigator& m_nav;
     Screen& m_target;
 };
-
-}  // namespace ap
+}

@@ -9,6 +9,7 @@
 using namespace ap;
 
 namespace {
+
 KeyEvent down(KeyId k, TickMs t) { return KeyEvent{k, KeyEdge::Down, t}; }
 KeyEvent up(KeyId k, TickMs t) { return KeyEvent{k, KeyEdge::Up, t}; }
 
@@ -17,9 +18,7 @@ std::vector<GestureEvent> drain(GestureRecognizer& g) {
     while (auto e = g.next()) out.push_back(*e);
     return out;
 }
-}  // namespace
-
-// ---- GestureRecognizer -----------------------------------------------------------
+}
 
 TEST(Gesture, ShortPressReportsPressTime) {
     GestureRecognizer g;
@@ -45,7 +44,7 @@ TEST(Gesture, LongPressFiresWhileHeldAndReleaseIsSilent) {
 }
 
 TEST(Gesture, LateUpEdgeStillCountsAsLong) {
-    GestureRecognizer g;  // no poll() between edges: the Up edge itself must judge time
+    GestureRecognizer g;
     g.onKeyEvent(down(KeyId::Back, 0));
     g.onKeyEvent(up(KeyId::Back, 900));
     const auto out = drain(g);
@@ -64,7 +63,6 @@ TEST(Gesture, DoubleOnlyWhenEnabled) {
     ASSERT_EQ(out.size(), 1u);
     EXPECT_EQ(out[0].gesture, Gesture::Double);
 
-    // Same edges on a key without double detection -> two shorts.
     g.onKeyEvent(down(KeyId::Up, 1000));
     g.onKeyEvent(up(KeyId::Up, 1080));
     g.onKeyEvent(down(KeyId::Up, 1200));
@@ -105,9 +103,9 @@ TEST(Gesture, KeysAreIndependent) {
 TEST(Gesture, WorksAcrossTickWrap) {
     GestureRecognizer g;
     g.onKeyEvent(down(KeyId::Start, 0xFFFFFF00u));
-    g.poll(0x00000200u);  // 0x300 ms later = 768 ms < 800
+    g.poll(0x00000200u);
     EXPECT_EQ(g.pending(), 0u);
-    g.poll(0x00000220u);  // 800 ms
+    g.poll(0x00000220u);
     EXPECT_EQ(g.pending(), 1u);
 }
 
@@ -132,9 +130,8 @@ TEST(Gesture, OverflowSaturatesDropCounter) {
     EXPECT_EQ(g.dropped(), 0u);
 }
 
-// ---- InputRouter (Chain of Responsibility) -------------------------------------------
-
 namespace {
+
 struct Handler final : IInputHandler {
     explicit Handler(bool consume) : consume(consume) {}
     bool handle(const GestureEvent&) override { ++calls; return consume; }
@@ -143,7 +140,7 @@ struct Handler final : IInputHandler {
     int calls = 0;
 };
 const GestureEvent kStart{KeyId::Start, Gesture::Short, 0};
-}  // namespace
+}
 
 static_assert(std::is_abstract_v<IInputHandler>);
 static_assert(!std::is_copy_constructible_v<IInputHandler>);

@@ -5,12 +5,6 @@
 
 namespace ap {
 
-// Mediator between the activity session and the screen stack.
-//
-// The session only announces "Running -> Paused"; it has no idea a pause menu
-// exists. Screens only call IActivityControl; they never push the pause menu
-// themselves. This one class owns the rule "which screen follows which
-// activity state", so changing the UX flow touches exactly one file.
 class ActivityFlowCoordinator final : private IEventListener {
 public:
     ActivityFlowCoordinator(EventBus& bus, Navigator& nav, Screen& home, Screen& dataScreen, Screen& pauseMenu)
@@ -23,7 +17,7 @@ public:
 private:
     void onEvent(const Event& e) override {
         const ActivityStateChange& c = e.activity;
-        if (c.from == c.to) return;  // failure notification, handled by the overlay
+        if (c.from == c.to) return;
         const TickMs t = e.timestampMs;
         switch (c.to) {
             case ActivityState::Ready:
@@ -48,5 +42,4 @@ private:
     Screen& m_pause;
     Subscription m_sub;
 };
-
-}  // namespace ap
+}

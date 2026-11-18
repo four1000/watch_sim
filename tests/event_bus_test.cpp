@@ -8,6 +8,7 @@
 using namespace ap;
 
 namespace {
+
 struct Listener : IEventListener {
     void onEvent(const Event& e) override {
         types.push_back(e.type);
@@ -19,7 +20,7 @@ struct Listener : IEventListener {
 
 Event tick(TickMs t = 0) { return Event::makeSecondTick(t); }
 Event settings(TickMs t = 0) { return Event::makeSettingsChanged(t); }
-}  // namespace
+}
 
 static_assert(!std::is_copy_constructible_v<Subscription>);
 static_assert(std::is_nothrow_move_constructible_v<Subscription>);
@@ -91,7 +92,6 @@ TEST(EventBus, ZeroMaskOrFullTableGivesInactiveToken) {
     EXPECT_FALSE(bus.subscribe(l, topic(EventType::SecondTick)).active());
 }
 
-// Listener that unsubscribes *another* listener while an event is being delivered.
 TEST(EventBus, UnsubscribeDuringDispatchIsSafe) {
     EventBus bus;
     static Subscription* victim = nullptr;

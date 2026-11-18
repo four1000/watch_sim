@@ -6,9 +6,6 @@
 
 namespace sim {
 
-// Adapter: ap::ICanvas (what the AP layer wants) -> OpenCV drawing calls.
-// The AP layer works in logical 240x240 pixels; `scale` renders at a higher
-// resolution so the simulator window stays crisp.
 class OpenCvCanvas final : public ap::ICanvas {
 public:
     OpenCvCanvas(int16_t logicalSize, int scale);
@@ -35,5 +32,4 @@ private:
     int m_scale;
     cv::Mat m_img;
 };
-
-}  // namespace sim
+}

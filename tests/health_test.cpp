@@ -18,6 +18,7 @@ TEST(HrZones, BoundariesForMax190) {
 }
 
 namespace {
+
 struct MonitorFixture : ::testing::Test {
     struct Spy : IEventListener {
         void onEvent(const Event& e) override { events.push_back(e); }
@@ -43,23 +44,23 @@ struct MonitorFixture : ::testing::Test {
     }
 
     EventBus bus;
-    SettingsStore settings{bus};  // maxHr 190, target Z2 (114..132)
+    SettingsStore settings{bus};
     HrZoneMonitor monitor{bus, settings};
     Spy spy;
     Subscription spySub;
 };
-}  // namespace
+}
 
 TEST_F(MonitorFixture, HysteresisPreventsFlicker) {
-    sample(0, 140);  // Z3
+    sample(0, 140);
     EXPECT_EQ(monitor.zone(), 3);
     const int changes = spy.count(EventType::HrZoneChanged);
-    sample(1000, 132);  // just below Z3 bound 133, inside the band
+    sample(1000, 132);
     sample(2000, 134);
     sample(3000, 132);
     EXPECT_EQ(monitor.zone(), 3);
     EXPECT_EQ(spy.count(EventType::HrZoneChanged), changes);
-    sample(4000, 130);  // 130 + 2 < 133 -> Z2
+    sample(4000, 130);
     EXPECT_EQ(monitor.zone(), 2);
 }
 
@@ -70,7 +71,7 @@ TEST_F(MonitorFixture, NoAlertUnlessRunning) {
 
 TEST_F(MonitorFixture, AlertAfterDebounceThenRateLimited) {
     running(true);
-    sample(0, 175);     // out of target starts
+    sample(0, 175);
     sample(2999, 175);
     EXPECT_EQ(spy.count(EventType::HrAlert), 0) << "debounce";
     sample(3000, 175);
@@ -85,9 +86,9 @@ TEST_F(MonitorFixture, AlertAfterDebounceThenRateLimited) {
 TEST_F(MonitorFixture, BackInTargetResetsDebounce) {
     running(true);
     sample(0, 175);
-    sample(2000, 120);  // back in Z2
+    sample(2000, 120);
     sample(2500, 175);
-    sample(5000, 175);  // only 2.5 s out
+    sample(5000, 175);
     EXPECT_EQ(spy.count(EventType::HrAlert), 0);
 }
 
@@ -103,9 +104,9 @@ TEST_F(MonitorFixture, SensorLossClearsZoneAndAlert) {
 }
 
 TEST_F(MonitorFixture, SettingsChangeRecomputesZone) {
-    sample(0, 150);  // Z3 at max 190
+    sample(0, 150);
     EXPECT_EQ(monitor.zone(), 3);
-    EXPECT_TRUE(settings.setMaxHr(220, 0));  // Z3 starts at 154 now -> Z2
+    EXPECT_TRUE(settings.setMaxHr(220, 0));
     bus.dispatch();
     EXPECT_EQ(monitor.zone(), 2);
 }

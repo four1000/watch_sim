@@ -3,8 +3,8 @@
 #include "ap/ui/screens.h"
 
 namespace ap {
-
 namespace {
+
 constexpr uint8_t kRowCount = static_cast<uint8_t>(SettingsScreen::Row::Count);
 }
 
@@ -33,7 +33,7 @@ bool SettingsScreen::onGesture(const GestureEvent& e) {
             }
             return true;
         case KeyId::Back:
-            if (m_editing) {  // first BACK leaves edit mode, second one leaves the screen
+            if (m_editing) {
                 m_editing = false;
                 return true;
             }
@@ -47,7 +47,6 @@ void SettingsScreen::adjust(int delta, TickMs now) {
     const UserSettings& s = m_editor.settings();
     switch (m_row) {
         case Row::MaxHr:
-            // Invalid values are rejected by the editor; the screen does not duplicate the rule.
             m_editor.setMaxHr(static_cast<uint8_t>(s.maxHr + delta), now);
             break;
         case Row::TargetZone:
@@ -80,4 +79,4 @@ void SettingsScreen::onRender(ICanvas& c, const UiModel& m) {
     if (m_editing) c.drawText(cx, 210, "UP/DOWN change", Font::Small, Color::Yellow, Align::Center);
 }
 
-}  // namespace ap
+}

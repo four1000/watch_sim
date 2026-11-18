@@ -5,13 +5,12 @@
 #include "ap/ui/screens.h"
 
 namespace ap {
-
 namespace {
+
 constexpr uint8_t kPageCount = static_cast<uint8_t>(ActivityDataScreen::Page::Count);
 }
 
 void ActivityDataScreen::onEnter(TickMs) {
-    // Keep the page when coming back from the pause menu; reset only for a new activity.
     if (m_control.state() == ActivityState::Ready) m_page = Page::Timer;
 }
 
@@ -29,8 +28,6 @@ bool ActivityDataScreen::onGesture(const GestureEvent& e) {
             m_control.startPause(e.timestampMs);
             return true;
         case KeyId::Back:
-            // Running: lap. Ready: leave the activity. Paused: consumed, so BACK
-            // cannot pop us off the stack while an activity is still open.
             if (m_control.state() == ActivityState::Running) m_control.lap(e.timestampMs);
             else if (m_control.state() == ActivityState::Ready) m_control.cancel(e.timestampMs);
             return true;
@@ -47,7 +44,6 @@ void ActivityDataScreen::onRender(ICanvas& c, const UiModel& m) {
         case Page::Lap:       renderLap(c, m); break;
         case Page::Count:     break;
     }
-    // Page dots.
     const int16_t cx = static_cast<int16_t>(c.width() / 2);
     for (uint8_t i = 0; i < kPageCount; ++i) {
         const int16_t x = static_cast<int16_t>(cx + (i - 1) * 12);
@@ -93,40 +89,29 @@ void ActivityDataScreen::renderTimer(ICanvas& c, const UiModel& m) const {
 void ActivityDataScreen::renderHeartRate(ICanvas& c, const UiModel& m) const {
     const int16_t cx = static_cast<int16_t>(c.width() / 2);
     const int16_t cy = static_cast<int16_t>(c.height() / 2);
-    // The gauge hugs the display edge, so it stays clear of the status bar.
     const int16_t r = static_cast<int16_t>(cx - 6);
 
-    // Point at `rad` from the centre at `deg` (y points down, angles clockwise).
     constexpr double kDegToRad = 3.14159265358979 / 180.0;
     const auto px = [&](int rad, int deg) { return static_cast<int16_t>(cx + std::lround(rad * std::cos(deg * kDegToRad))); };
     const auto py = [&](int rad, int deg) { return static_cast<int16_t>(cy + std::lround(rad * std::sin(deg * kDegToRad))); };
 
-    // Zone gauge: 5 coloured segments on the lower 270 degrees.
     constexpr int kStart = 135, kSpan = 270;
     constexpr int kSeg = kSpan / kZoneCount;
-    // Every segment has the same width; the target zone is marked by a white
-    // tick at each of its two boundaries instead of a thicker segment.
     for (uint8_t z = 1; z <= kZoneCount; ++z) {
+        const bool target = z == m.settings.targetZone;
+        const int thickness = target ? 9 : 6;
+        const int roundCapDeg = static_cast<int>(std::ceil((thickness / 2.0) / (r * kDegToRad)));
         const int a0 = kStart + (z - 1) * kSeg;
-        c.drawArc(cx, cy, r, static_cast<int16_t>(a0 + 1), static_cast<int16_t>(a0 + kSeg - 1), 6, zoneColor(z));
-    }
-    const uint8_t tz = m.settings.targetZone;
-    if (tz >= 1 && tz <= kZoneCount) {
-        const int a0 = kStart + (tz - 1) * kSeg;
-        for (const int a : {a0, a0 + kSeg}) {
-            c.drawLine(px(r - 5, a), py(r - 5, a), px(r + 6, a), py(r + 6, a), 2, Color::White);
-        }
+        c.drawArc(cx, cy, r, static_cast<int16_t>(a0 + roundCapDeg), static_cast<int16_t>(a0 + kSeg - roundCapDeg),
+                  static_cast<uint8_t>(thickness), target ? zoneColor(z) : zoneColorDim(z));
     }
 
     char buf[24];
     if (m.hrValid) {
-        // Needle position inside its zone, by bpm.
         const uint8_t maxHr = m.settings.maxHr;
         const int lo = hrZoneLowerBound(1, maxHr);
         const int clamped = m.hrBpm < lo ? lo : (m.hrBpm > maxHr ? maxHr : m.hrBpm);
         const int angle = kStart + (clamped - lo) * kSpan / (maxHr - lo > 0 ? maxHr - lo : 1);
-        // Marker sits on the gauge itself: a white dot with a dark ring, so it
-        // reads against every zone colour and cannot be confused with the ticks.
         c.fillCircle(px(r, angle), py(r, angle), 7, Color::Black);
         c.fillCircle(px(r, angle), py(r, angle), 5, Color::White);
 
@@ -161,4 +146,4 @@ void ActivityDataScreen::renderLap(ICanvas& c, const UiModel& m) const {
     }
 }
 
-}  // namespace ap
+}

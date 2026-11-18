@@ -12,24 +12,23 @@ using namespace ap;
 namespace {
 GpsSample fix(TickMs t, uint32_t odo, uint16_t acc = 5) { return GpsSample{t, odo, acc, true}; }
 HrSample hr(TickMs t, uint8_t bpm) { return HrSample{t, bpm, true}; }
-}  // namespace
+}
 
-// ---- ActivityMetrics (pure computation) ---------------------------------------------
 
 TEST(Metrics, ElapsedExcludesPauses) {
     ActivityMetrics m;
     m.start(1000);
-    m.pause(61000);   // 60 s
-    m.resume(120000); // 59 s paused
+    m.pause(61000);
+    m.resume(120000);
     EXPECT_EQ(m.elapsedMs(150000), 90000u);
 }
 
 TEST(Metrics, DistanceFromOdometerDeltasAcrossWrap) {
     ActivityMetrics m;
     m.start(0);
-    m.onGps(fix(0, 0xFFFFFF00u));  // baseline: the odometer does not start at 0
-    m.onGps(fix(1000, 0xFFFFFF80u));  // +128 dm
-    m.onGps(fix(2000, 0x00000010u));  // wrapped: +144 dm (still under the 15 m/s glitch limit)
+    m.onGps(fix(0, 0xFFFFFF00u));
+    m.onGps(fix(1000, 0xFFFFFF80u));
+    m.onGps(fix(2000, 0x00000010u));
     EXPECT_EQ(m.distanceDm(), 128u + 144u);
 }
 
@@ -39,9 +38,9 @@ TEST(Metrics, DistanceWhilePausedIsNotCounted) {
     m.onGps(fix(0, 1000));
     m.onGps(fix(1000, 1030));
     m.pause(1000);
-    m.onGps(fix(5000, 5000));  // walking to the car while paused
+    m.onGps(fix(5000, 5000));
     m.resume(6000);
-    m.onGps(fix(6000, 6000));  // new baseline
+    m.onGps(fix(6000, 6000));
     m.onGps(fix(7000, 6030));
     EXPECT_EQ(m.distanceDm(), 60u);
 }
@@ -50,22 +49,22 @@ TEST(Metrics, GlitchAndPoorAccuracyRejected) {
     ActivityMetrics m;
     m.start(0);
     m.onGps(fix(0, 0));
-    m.onGps(fix(1000, 30, 200));    // accuracy 200 m: ignored
+    m.onGps(fix(1000, 30, 200));
     m.onGps(fix(2000, 60));
-    m.onGps(fix(3000, 60 + 5000));  // 500 m in 1 s: glitch, re-baseline
+    m.onGps(fix(3000, 60 + 5000));
     m.onGps(fix(4000, 60 + 5000 + 30));
     EXPECT_EQ(m.distanceDm(), 90u);
 }
 
 TEST(Metrics, PaceCalculation) {
-    EXPECT_EQ(ActivityMetrics::paceSecKm(300000, 10000), 300u);  // 5:00 /km
+    EXPECT_EQ(ActivityMetrics::paceSecKm(300000, 10000), 300u);
     EXPECT_EQ(ActivityMetrics::paceSecKm(1000, 10), 0u) << "standing still";
     EXPECT_EQ(ActivityMetrics::paceSecKm(0xFFFFFFFFu, 20), ActivityMetrics::kMaxPaceSecKm) << "clamped, no overflow";
 
     ActivityMetrics m;
     m.start(0);
-    for (TickMs t = 0; t <= 5000; t += 1000) m.onGps(fix(t, t / 1000 * 33));  // 3.3 m/s
-    EXPECT_EQ(m.currentPaceSecKm(), 303u);  // 5:03 /km
+    for (TickMs t = 0; t <= 5000; t += 1000) m.onGps(fix(t, t / 1000 * 33));
+    EXPECT_EQ(m.currentPaceSecKm(), 303u);
 }
 
 TEST(Metrics, LapsSplitTimeDistanceAndHr) {
@@ -101,7 +100,6 @@ TEST(Metrics, LapStorageFullStillCountsLaps) {
     EXPECT_EQ(snap.lastLap.index, ActivityMetrics::kMaxStoredLaps + 3) << "last lap is still correct";
 }
 
-// ---- ActivitySession (State pattern) --------------------------------------------------
 
 static_assert(std::is_abstract_v<IActivityControl>);
 static_assert(!std::is_copy_constructible_v<ActivitySession>);
@@ -127,7 +125,7 @@ struct SessionFixture : ::testing::Test {
     Spy spy;
     Subscription spySub;
 };
-}  // namespace
+}
 
 TEST_F(SessionFixture, HappyPathIdleReadyRunningPausedSaved) {
     EXPECT_TRUE(session.prepare(0));
@@ -211,7 +209,7 @@ TEST_F(SessionFixture, CancelAndDiscard) {
 TEST_F(SessionFixture, SamplesOnlyCountWhileRunning) {
     session.prepare(0);
     bus.publish(Event::makeGps(fix(0, 0)));
-    bus.publish(Event::makeGps(fix(1000, 500)));  // Ready: ignored by metrics
+    bus.publish(Event::makeGps(fix(1000, 500)));
     deliver();
     session.startPause(1000);
     bus.publish(Event::makeGps(fix(1000, 500)));

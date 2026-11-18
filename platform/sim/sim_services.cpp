@@ -5,8 +5,8 @@
 #include <fstream>
 
 namespace sim {
-
 namespace {
+
 ap::LocalTime fromTm(const std::tm& t) {
     ap::LocalTime lt{};
     lt.year = static_cast<uint16_t>(t.tm_year + 1900);
@@ -18,7 +18,7 @@ ap::LocalTime fromTm(const std::tm& t) {
     lt.second = static_cast<uint8_t>(t.tm_sec);
     return lt;
 }
-}  // namespace
+}
 
 ap::LocalTime SimWallClock::now() const {
     if (!m_fixed) {
@@ -27,7 +27,6 @@ ap::LocalTime SimWallClock::now() const {
         localtime_s(&tm, &t);
         return fromTm(tm);
     }
-    // Fixed base + elapsed seconds (scripts start at tick 0).
     const uint32_t secs = (m_tick ? *m_tick : 0u) / 1000u;
     std::tm tm{};
     tm.tm_year = m_base.year - 1900;
@@ -37,7 +36,7 @@ ap::LocalTime SimWallClock::now() const {
     tm.tm_min = m_base.minute;
     tm.tm_sec = m_base.second + static_cast<int>(secs);
     tm.tm_isdst = -1;
-    std::mktime(&tm);  // normalises overflowing seconds and fills tm_wday
+    std::mktime(&tm);
     return fromTm(tm);
 }
 
@@ -92,4 +91,4 @@ std::string CsvActivityRecorder::lastFile() const {
     return m_lastFile;
 }
 
-}  // namespace sim
+}

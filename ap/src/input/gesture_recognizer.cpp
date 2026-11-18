@@ -34,8 +34,6 @@ void GestureRecognizer::setDoubleEnabled(KeyId key, bool enabled) {
 bool GestureRecognizer::onKeyEvent(const KeyEvent& e) {
     if (!isValid(e.key) || (e.edge != KeyEdge::Down && e.edge != KeyEdge::Up)) return false;
 
-    // Let time-based transitions happen first, so an edge that arrives late
-    // (after the window / threshold) is judged against the right state.
     poll(e.timestampMs);
 
     KeyCtx& k = m_keys[keyIndex(e.key)];
@@ -80,8 +78,6 @@ void GestureRecognizer::poll(TickMs nowMs) {
         switch (k.state) {
             case KeyState::Pressed:
             case KeyState::SecondDown:
-                // Holding the second press long turns it into a Long press;
-                // the first tap is reported as a Short first (it did happen).
                 if (held >= m_cfg.longPressMs) {
                     if (k.state == KeyState::SecondDown) {
                         emit(key, Gesture::Short, k.pressedAt);
@@ -118,4 +114,4 @@ void GestureRecognizer::emit(KeyId key, Gesture g, TickMs t) {
     }
 }
 
-}  // namespace ap
+}

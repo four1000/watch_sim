@@ -19,7 +19,7 @@ bool SoftTimerPool::cancel(TimerHandle h) {
     if (!isRunning(h)) return false;
     Slot& s = m_slots[h.slot];
     s.listener = nullptr;
-    ++s.generation;  // invalidates every copy of the handle
+    ++s.generation;
     return true;
 }
 
@@ -35,8 +35,8 @@ void SoftTimerPool::poll(TickMs nowMs) {
         if (s.listener == nullptr || !s.armed || !timeReached(nowMs, s.deadline)) continue;
         ITimerListener* l = s.listener;
         const uint8_t tag = s.tag;
-        s.listener = nullptr;  // free the slot *before* the callback:
-        ++s.generation;        // the listener may restart the same timer
+        s.listener = nullptr;
+        ++s.generation;
         l->onTimer(tag, nowMs);
     }
     m_polling = false;
@@ -51,4 +51,4 @@ std::size_t SoftTimerPool::active() const {
     return n;
 }
 
-}  // namespace ap
+}

@@ -9,27 +9,24 @@ namespace ap {
 
 struct UserSettings {
     uint8_t maxHr = 190;
-    uint8_t targetZone = 2;  // 1..5
+    uint8_t targetZone = 2;
     bool hrAlerts = true;
 
     static constexpr uint8_t kMinMaxHr = 120;
     static constexpr uint8_t kMaxMaxHr = 220;
 };
 
-// What the Settings screen may do (ISP: it cannot publish arbitrary events).
 class ISettingsEditor {
 public:
     virtual const UserSettings& settings() const = 0;
-    virtual bool setMaxHr(uint8_t bpm, TickMs now) = 0;       // false: out of range
-    virtual bool setTargetZone(uint8_t zone, TickMs now) = 0; // false: not 1..5
+    virtual bool setMaxHr(uint8_t bpm, TickMs now) = 0;
+    virtual bool setTargetZone(uint8_t zone, TickMs now) = 0;
     virtual void setHrAlerts(bool on, TickMs now) = 0;
 
 protected:
     ~ISettingsEditor() = default;
 };
 
-// Owns the settings and announces every effective change on the bus, so
-// consumers (HrZoneMonitor) re-read instead of being called directly.
 class SettingsStore final : public ISettingsEditor {
 public:
     explicit SettingsStore(EventBus& bus) : m_bus(bus) {}
@@ -55,5 +52,4 @@ private:
     EventBus& m_bus;
     UserSettings m_settings;
 };
-
-}  // namespace ap
+}

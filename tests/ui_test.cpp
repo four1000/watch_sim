@@ -10,9 +10,9 @@
 using namespace ap;
 
 namespace {
+
 GestureEvent press(KeyId k, Gesture g = Gesture::Short, TickMs t = 0) { return GestureEvent{k, g, t}; }
 
-// Minimal screen that records its lifecycle.
 class TestScreen final : public Screen {
 public:
     explicit TestScreen(const char* n, bool consumeAll = false) : m_name(n), m_consumeAll(consumeAll) {}
@@ -47,14 +47,12 @@ struct FakeControl final : IActivityControl {
     ActivityState st = ActivityState::Running;
     int prepares = 0, cancels = 0, startPauses = 0, laps = 0;
 };
-}  // namespace
+}
 
 static_assert(std::is_abstract_v<Screen>);
 static_assert(!std::is_copy_constructible_v<Screen>);
 static_assert(!std::is_polymorphic_v<UiModel>, "view model is plain data");
 static_assert(std::is_trivially_copyable_v<UiModel>);
-
-// ---- Navigator -------------------------------------------------------------------
 
 TEST(Navigator, PushPopRunsLifecycleInPairs) {
     Navigator nav;
@@ -109,8 +107,6 @@ TEST(Navigator, EmptyStackIsSafe) {
     nav.render(c, UiModel{});
     EXPECT_EQ(c.clears, 0);
 }
-
-// ---- Screens -----------------------------------------------------------------------
 
 TEST(MenuScreen, NavigatesAndExecutesSelectedCommand) {
     MenuScreen menu("MENU");
@@ -181,8 +177,6 @@ TEST(MenuScreen, ShowsOnlyNeighboursThatExist) {
     EXPECT_TRUE(canvas.shows("Discard"));
 }
 
-// ---- Theme (backlight) ---------------------------------------------------------------
-
 static_assert(themed(Color::Black, Theme::Light) == Color::White, "light theme: white background");
 static_assert(themed(Color::White, Theme::Light) == Color::Black, "light theme: dark text");
 static_assert(themed(Color::Yellow, Theme::Dark) == Color::Yellow, "dark theme is the identity");
@@ -192,10 +186,11 @@ TEST(Theme, LightThemeKeepsEveryColourReadableOnWhite) {
     const Color all[] = {Color::Black, Color::White,  Color::LightGray, Color::Gray,  Color::DarkGray,
                          Color::Red,   Color::Orange, Color::Yellow,    Color::Green, Color::Blue,
                          Color::Cyan,  Color::Zone1,  Color::Zone2,     Color::Zone3, Color::Zone4,
-                         Color::Zone5};
+                         Color::Zone5, Color::Zone1Dim, Color::Zone2Dim, Color::Zone3Dim, Color::Zone4Dim,
+                         Color::Zone5Dim};
     for (Color c : all) {
         EXPECT_EQ(themed(c, Theme::Dark), c);
-        if (c == Color::Black) continue;  // the background itself
+        if (c == Color::Black) continue;
         const Color l = themed(c, Theme::Light);
         EXPECT_NE(l, Color::White) << "would vanish on white: " << static_cast<int>(c);
         EXPECT_NE(l, Color::Yellow) << static_cast<int>(c);
@@ -241,9 +236,9 @@ TEST(ActivityDataScreen, PagesCycleAndRenderFromModel) {
     ActivityDataScreen screen(ctl);
     UiModel m;
     m.activity.state = ActivityState::Running;
-    m.activity.elapsedMs = 754000;     // 12:34
-    m.activity.distanceDm = 34200;     // 3.42 km
-    m.activity.currentPaceSecKm = 312; // 5:12
+    m.activity.elapsedMs = 754000;
+    m.activity.distanceDm = 34200;
+    m.activity.currentPaceSecKm = 312;
     m.hrValid = true;
     m.hrBpm = 151;
     m.hrZone = 3;
@@ -270,7 +265,7 @@ TEST(SettingsScreen, EditModeChangesValuesThroughEditor) {
     SettingsStore store(bus);
     SettingsScreen screen(store);
     screen.enter(0);
-    screen.handle(press(KeyId::Start));  // edit Max HR
+    screen.handle(press(KeyId::Start));
     EXPECT_TRUE(screen.editing());
     screen.handle(press(KeyId::Up));
     EXPECT_EQ(store.settings().maxHr, 191);
@@ -278,7 +273,7 @@ TEST(SettingsScreen, EditModeChangesValuesThroughEditor) {
     EXPECT_FALSE(screen.editing());
     EXPECT_FALSE(screen.handle(press(KeyId::Back))) << "second BACK leaves the screen";
 
-    screen.handle(press(KeyId::Down));   // Target zone
+    screen.handle(press(KeyId::Down));
     screen.handle(press(KeyId::Start));
     for (int i = 0; i < 10; ++i) screen.handle(press(KeyId::Up));
     EXPECT_EQ(store.settings().targetZone, 5) << "editor clamps by rejecting";

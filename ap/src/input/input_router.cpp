@@ -22,4 +22,4 @@ IInputHandler* InputRouter::route(const GestureEvent& e) {
     return nullptr;
 }
 
-}  // namespace ap
+}

@@ -9,46 +9,27 @@
 
 namespace ap {
 
-// The narrow interface the UI is allowed to use (Interface Segregation):
-// screens and menu commands can drive the activity, but cannot reach the
-// recorder, GPS service or metrics internals.
-// Every call returns false when the request makes no sense in the current
-// state (e.g. lap() while paused) - the caller does not need to know the rules.
 class IActivityControl {
 public:
-    virtual bool prepare(TickMs now) = 0;     // Idle    -> Ready   (starts GPS)
-    virtual bool cancel(TickMs now) = 0;      // Ready   -> Idle
-    virtual bool startPause(TickMs now) = 0;  // Ready -> Running <-> Paused
-    virtual bool lap(TickMs now) = 0;         // Running
-    virtual bool save(TickMs now) = 0;        // Paused  -> Idle
-    virtual bool discard(TickMs now) = 0;     // Paused  -> Idle
+    virtual bool prepare(TickMs now) = 0;
+    virtual bool cancel(TickMs now) = 0;
+    virtual bool startPause(TickMs now) = 0;
+    virtual bool lap(TickMs now) = 0;
+    virtual bool save(TickMs now) = 0;
+    virtual bool discard(TickMs now) = 0;
     virtual ActivityState state() const = 0;
 
 protected:
     ~IActivityControl() = default;
 };
 
-// Activity lifecycle implemented with the State pattern.
-//
-//            prepare            startPause           startPause
-//   Idle ------------> Ready -------------> Running <----------> Paused
-//    ^  <------------    |                     | lap (self)        |
-//    |      cancel       |                                         |
-//    +-------------------+--------------- save / discard ----------+
-//
-// Each state is an object that overrides only the requests it accepts; the
-// base class answers "ignored" for everything else. Adding a state (e.g.
-// AutoPaused) means adding a class, not touching every switch.
-//
-// The four state objects are members: no heap, no factory, and a transition
-// is just a pointer assignment wrapped by exit/entry actions.
 class ActivitySession final : public IActivityControl, private IEventListener {
 public:
     ActivitySession(IGpsService& gps, IActivityRecorder& recorder, EventBus& bus);
     ActivitySession(const ActivitySession&) = delete;
     ActivitySession& operator=(const ActivitySession&) = delete;
 
-    void attach();  // subscribes to sensor samples (call once at init)
+    void attach();
 
     bool prepare(TickMs now) override;
     bool cancel(TickMs now) override;
@@ -61,12 +42,11 @@ public:
     ActivitySnapshot snapshot(TickMs now) const;
     const ActivityMetrics& metrics() const { return m_metrics; }
 
-    static constexpr uint32_t kGpsStaleMs = 3000;  // no fix sample for 3 s -> "no GPS"
+    static constexpr uint32_t kGpsStaleMs = 3000;
 
 private:
     void onEvent(const Event& e) override;
 
-    // ---- State pattern ------------------------------------------------------
     class State {
     public:
         virtual ActivityState id() const = 0;
@@ -129,7 +109,6 @@ private:
     bool m_gpsFix = false;
     TickMs m_lastFixMs = 0;
 
-    Subscription m_sub;  // last member: unsubscribed before anything else is destroyed
+    Subscription m_sub;
 };
-
-}  // namespace ap
+}

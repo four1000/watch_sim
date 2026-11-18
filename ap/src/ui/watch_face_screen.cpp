@@ -3,12 +3,12 @@
 #include "ap/ui/screens.h"
 
 namespace ap {
-
 namespace {
+
 const char* const kWeekdays[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
 const char* const kMonths[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN",
                                "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
-}  // namespace
+}
 
 bool WatchFaceScreen::onGesture(const GestureEvent& e) {
     if (e.key == KeyId::Start && e.gesture == Gesture::Short) {
@@ -22,12 +22,10 @@ void WatchFaceScreen::onRender(ICanvas& c, const UiModel& m) {
     const int16_t cy = static_cast<int16_t>(c.height() / 2);
     const int16_t r = static_cast<int16_t>(cx - 8);
 
-    // Seconds ring: background + progress from 12 o'clock.
     c.drawArc(cx, cy, r, 0, 360, 4, Color::DarkGray);
     if (m.time.second > 0) {
         c.drawArc(cx, cy, r, -90, static_cast<int16_t>(-90 + 6 * m.time.second), 4, Color::Cyan);
     }
-    // START key hint at 2 o'clock.
     c.drawArc(cx, cy, static_cast<int16_t>(r + 4), -40, -20, 4, Color::Green);
 
     char buf[24];
@@ -47,4 +45,4 @@ void WatchFaceScreen::onRender(ICanvas& c, const UiModel& m) {
     if (m.keyLocked) c.drawText(cx, static_cast<int16_t>(cy - 62), "LOCKED", Font::Small, Color::Yellow, Align::Center);
 }
 
-}  // namespace ap
+}

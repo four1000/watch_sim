@@ -11,7 +11,7 @@ Event base(EventType t, TickMs ts) {
     e.timestampMs = ts;
     return e;
 }
-}  // namespace
+}
 
 Event Event::makeGesture(const GestureEvent& g) {
     Event e = base(EventType::Gesture, g.timestampMs);
@@ -85,7 +85,7 @@ const char* toString(ActivityOutcome o) {
     }
     return "";
 }
-}  // namespace
+}
 
 const char* describe(const Event& e, char* buf, std::size_t len) {
     if (buf == nullptr || len == 0) return "";
@@ -131,4 +131,4 @@ const char* describe(const Event& e, char* buf, std::size_t len) {
     return buf;
 }
 
-}  // namespace ap
+}

@@ -7,9 +7,6 @@
 
 namespace ap {
 
-// Fixed-capacity FIFO. Storage lives inside the object: no heap, ever.
-// Not thread-safe by itself; the owner decides the locking policy
-// (WatchApp wraps its inbox with an OSAL mutex, EventBus is single-threaded).
 template <typename T, std::size_t N>
 class RingBuffer {
     static_assert(N > 0, "capacity must be > 0");
@@ -19,8 +16,6 @@ class RingBuffer {
 public:
     static constexpr std::size_t kCapacity = N;
 
-    // Returns false (and changes nothing) when full. The caller decides
-    // whether that is a drop, a retry or an error - the buffer never overwrites.
     bool push(const T& v) {
         if (m_size == N) return false;
         m_items[m_tail] = v;
@@ -49,5 +44,4 @@ private:
     std::size_t m_tail = 0;
     std::size_t m_size = 0;
 };
-
-}  // namespace ap
+}

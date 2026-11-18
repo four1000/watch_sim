@@ -9,8 +9,6 @@
 
 using namespace ap;
 
-// ---- RingBuffer ----------------------------------------------------------------
-
 TEST(RingBuffer, FifoOrderAndCapacity) {
     RingBuffer<int, 3> rb;
     EXPECT_TRUE(rb.empty());
@@ -32,20 +30,17 @@ TEST(RingBuffer, StorageIsInline) {
     static_assert(std::is_trivially_copyable_v<RingBuffer<uint32_t, 4>>);
 }
 
-// ---- time -----------------------------------------------------------------------
-
 TEST(Time, WrapSafeComparison) {
     const TickMs nearWrap = 0xFFFFFF00u;
-    const TickMs deadline = nearWrap + 0x200u;  // wraps to 0x100
+    const TickMs deadline = nearWrap + 0x200u;
     EXPECT_FALSE(timeReached(nearWrap, deadline));
     EXPECT_FALSE(timeReached(0x0FFu, deadline));
     EXPECT_TRUE(timeReached(0x100u, deadline));
     EXPECT_EQ(elapsedMs(0x100u, nearWrap), 0x200u);
 }
 
-// ---- SoftTimerPool --------------------------------------------------------------
-
 namespace {
+
 struct Recorder : ITimerListener {
     void onTimer(uint8_t tag, TickMs now) override {
         tags[count] = tag;
@@ -59,7 +54,7 @@ struct Recorder : ITimerListener {
     SoftTimerPool* restartFrom = nullptr;
     TimerHandle* restartHandle = nullptr;
 };
-}  // namespace
+}
 
 TEST(SoftTimer, FiresOnceAtDeadline) {
     SoftTimerPool pool;
@@ -80,7 +75,7 @@ TEST(SoftTimer, StaleHandleCannotCancelNewTimer) {
     SoftTimerPool pool;
     Recorder r;
     const TimerHandle old = pool.start(0, 10, r, 1);
-    pool.poll(10);  // fires, slot freed
+    pool.poll(10);
     const TimerHandle fresh = pool.start(10, 10, r, 2);
     EXPECT_EQ(old.slot, fresh.slot) << "slot is reused";
     EXPECT_FALSE(pool.cancel(old)) << "generation protects the new owner";

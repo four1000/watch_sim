@@ -5,8 +5,8 @@
 #include <opencv2/imgproc.hpp>
 
 namespace sim {
-
 namespace {
+
 struct FontSpec {
     int face;
     double scale;
@@ -22,7 +22,7 @@ FontSpec spec(ap::Font f) {
     }
     return {cv::FONT_HERSHEY_SIMPLEX, 0.5, 1};
 }
-}  // namespace
+}
 
 OpenCvCanvas::OpenCvCanvas(int16_t logicalSize, int scale)
     : m_size(logicalSize), m_scale(scale), m_img(logicalSize * scale, logicalSize * scale, CV_8UC3) {}
@@ -45,6 +45,11 @@ cv::Scalar OpenCvCanvas::toBgr(ap::Color c) {
         case ap::Color::Zone3:     return {70, 190, 60};
         case ap::Color::Zone4:     return {0, 150, 255};
         case ap::Color::Zone5:     return {60, 50, 230};
+        case ap::Color::Zone1Dim:  return toBgr(ap::Color::Zone1) * 0.8;
+        case ap::Color::Zone2Dim:  return toBgr(ap::Color::Zone2) * 0.8;
+        case ap::Color::Zone3Dim:  return toBgr(ap::Color::Zone3) * 0.8;
+        case ap::Color::Zone4Dim:  return toBgr(ap::Color::Zone4) * 0.8;
+        case ap::Color::Zone5Dim:  return toBgr(ap::Color::Zone5) * 0.8;
     }
     return {255, 0, 255};
 }
@@ -61,7 +66,6 @@ void OpenCvCanvas::fillCircle(int16_t cx, int16_t cy, int16_t r, ap::Color c) {
 
 void OpenCvCanvas::drawArc(int16_t cx, int16_t cy, int16_t r, int16_t startDeg, int16_t endDeg, uint8_t thickness,
                            ap::Color c) {
-    // OpenCV angles are clockwise from the x axis (y points down) - same convention as ICanvas.
     cv::ellipse(m_img, pt(cx, cy), cv::Size(r * m_scale, r * m_scale), 0, startDeg, endDeg, toBgr(c),
                 thickness * m_scale, cv::LINE_AA);
 }
@@ -80,8 +84,8 @@ void OpenCvCanvas::drawText(int16_t x, int16_t y, std::string_view text, ap::Fon
     int px = x * m_scale;
     if (a == ap::Align::Center) px -= sz.width / 2;
     else if (a == ap::Align::Right) px -= sz.width;
-    const int py = y * m_scale + sz.height / 2;  // y is the vertical centre
+    const int py = y * m_scale + sz.height / 2;
     cv::putText(m_img, s, cv::Point(px, py), fs.face, scale, toBgr(c), thick, cv::LINE_AA);
 }
 
-}  // namespace sim
+}

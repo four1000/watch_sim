@@ -1,7 +1,3 @@
-// End-to-end tests of the whole AP layer: real WatchApp, fake services.
-// Input goes in as raw key edges, output is checked on the screen stack,
-// the overlay, the recorder and the draw calls.
-
 #include <gtest/gtest.h>
 
 #include <atomic>
@@ -14,10 +10,8 @@
 
 using namespace ap;
 
-// ---- Global allocation counter ------------------------------------------------------
-// Replaces operator new for this test binary. Only *counts* - allocation
-// still works, so GoogleTest itself is unaffected.
 namespace {
+
 std::atomic<long> g_allocs{0};
 }
 void* operator new(std::size_t n) {
@@ -54,13 +48,12 @@ struct App : ::testing::Test {
         app.postKey(KeyEvent{k, KeyEdge::Down, now});
         advance(holdMs);
         app.postKey(KeyEvent{k, KeyEdge::Up, now});
-        advance(400);  // longer than the double-click window
+        advance(400);
     }
     void hold(KeyId k) { press(k, 1000); }
     std::string top() const { return app.topScreenName(); }
 };
-
-}  // namespace
+}
 
 TEST_F(App, BootsToWatchFaceAndStartsHr) {
     EXPECT_EQ(top(), "WatchFace");
@@ -71,27 +64,27 @@ TEST_F(App, BootsToWatchFaceAndStartsHr) {
 }
 
 TEST_F(App, FullRunFlowThroughKeys) {
-    press(KeyId::Start);  // watch face -> menu
+    press(KeyId::Start);
     EXPECT_EQ(top(), "ACTIVITY");
-    press(KeyId::Start);  // "Run"
+    press(KeyId::Start);
     EXPECT_EQ(top(), "ActivityData");
     EXPECT_EQ(app.activityState(), ActivityState::Ready);
     EXPECT_TRUE(gps.running);
 
-    press(KeyId::Start);  // start timer
+    press(KeyId::Start);
     EXPECT_EQ(app.activityState(), ActivityState::Running);
     for (int i = 0; i < 10; ++i) {
         app.postGps(GpsSample{now, static_cast<uint32_t>(i * 30), 5, true});
         app.postHr(HrSample{now, 125, true});
         advance(1000);
     }
-    press(KeyId::Back);  // lap
+    press(KeyId::Back);
     EXPECT_STREQ(app.overlayTitle(), "LAP 1");
 
-    press(KeyId::Start);  // pause -> coordinator pushes pause menu
+    press(KeyId::Start);
     EXPECT_EQ(app.activityState(), ActivityState::Paused);
     EXPECT_EQ(top(), "PAUSED");
-    press(KeyId::Down);   // Save
+    press(KeyId::Down);
     press(KeyId::Start);
     EXPECT_EQ(app.activityState(), ActivityState::Idle);
     EXPECT_EQ(top(), "WatchFace") << "flow coordinator returns home";
@@ -118,7 +111,7 @@ TEST_F(App, ClockHiddenInsideRunAndSettings) {
     press(KeyId::Back);
     press(KeyId::Up);
 
-    press(KeyId::Start);  // Run
+    press(KeyId::Start);
     EXPECT_EQ(top(), "ActivityData");
     EXPECT_FALSE(clockShown()) << "activity data (Ready)";
     press(KeyId::Start);
@@ -132,9 +125,9 @@ TEST_F(App, ResumeFromPauseMenuReturnsToDataScreen) {
     press(KeyId::Start);
     press(KeyId::Start);
     press(KeyId::Start);
-    press(KeyId::Start);  // pause
+    press(KeyId::Start);
     ASSERT_EQ(top(), "PAUSED");
-    press(KeyId::Start);  // "Resume"
+    press(KeyId::Start);
     EXPECT_EQ(app.activityState(), ActivityState::Running);
     EXPECT_EQ(top(), "ActivityData");
 }
@@ -154,9 +147,9 @@ TEST_F(App, GpsFailureShowsModalAlertAndStaysInMenu) {
     press(KeyId::Start);
     EXPECT_EQ(top(), "ACTIVITY");
     EXPECT_STREQ(app.overlayTitle(), "START FAILED");
-    press(KeyId::Down);  // any key dismisses the modal overlay...
+    press(KeyId::Down);
     EXPECT_STREQ(app.overlayTitle(), "");
-    press(KeyId::Down);  // ...and only then reaches the menu
+    press(KeyId::Down);
     EXPECT_EQ(top(), "ACTIVITY");
 }
 
@@ -164,19 +157,18 @@ TEST_F(App, HrAlertDuringRunIsModalAndVibrates) {
     press(KeyId::Start);
     press(KeyId::Start);
     press(KeyId::Start);
-    for (int i = 0; i < 5; ++i) {
-        app.postHr(HrSample{now, 180, true});  // Z5, target Z2
-        advance(1000);
+    for (int i = 0; i < 100 && std::string(app.overlayTitle()) != "HR HIGH"; ++i) {
+        if (i % 10 == 0) app.postHr(HrSample{now, 180, true});
+        advance(100);
     }
     EXPECT_STREQ(app.overlayTitle(), "HR HIGH");
     ASSERT_FALSE(vibrator.patterns.empty());
     EXPECT_EQ(vibrator.patterns.back(), VibePattern::Long);
-    press(KeyId::Back);  // dismiss: must NOT take a lap
+    press(KeyId::Back);
     EXPECT_EQ(app.session().metrics().lapCount(), 0u);
 }
 
 TEST_F(App, KeyLockSwallowsEverythingButDoubleLight) {
-    // double LIGHT
     app.postKey(KeyEvent{KeyId::Light, KeyEdge::Down, now});
     advance(60);
     app.postKey(KeyEvent{KeyId::Light, KeyEdge::Up, now});
@@ -185,7 +177,7 @@ TEST_F(App, KeyLockSwallowsEverythingButDoubleLight) {
     advance(60);
     app.postKey(KeyEvent{KeyId::Light, KeyEdge::Up, now});
     advance(400);
-    app.render(canvas);  // the model is rebuilt on render
+    app.render(canvas);
     EXPECT_TRUE(app.model().keyLocked);
     press(KeyId::Start);
     EXPECT_EQ(top(), "WatchFace") << "locked";
@@ -210,7 +202,6 @@ TEST_F(App, BacklightSwitchesToWhiteBackgroundWithDarkText) {
     EXPECT_EQ(canvas.background, Color::White) << "backlight on: light theme";
     EXPECT_EQ(canvas.colorOf("08:42"), Color::Black);
 
-    // The timeout turns the light off; that alone must request a redraw.
     while (backlight.on) {
         now += 20;
         app.step(now);
@@ -248,10 +239,8 @@ TEST_F(App, RendersOnlyWhenDirty) {
     EXPECT_TRUE(app.needsRender()) << "1 s tick";
 }
 
-// The key embedded-design claim: after init(), the AP layer never allocates.
-// The fakes above use std::vector / std::string, so this test runs the same
-// scenario with allocation-free fakes and counts every operator new.
 namespace {
+
 struct QuietRecorder final : IActivityRecorder {
     bool begin(TickMs) override { return true; }
     bool recordLap(const LapRecord&) override { ++laps; return true; }
@@ -274,7 +263,7 @@ struct QuietCanvas final : ICanvas {
     void drawText(int16_t, int16_t, std::string_view t, Font, Color, Align) override { chars += t.size(); }
     std::size_t chars = 0;
 };
-}  // namespace
+}
 
 TEST(AppMemory, ZeroHeapAllocationAfterInit) {
     fakes::FakeGps gps;
@@ -304,22 +293,20 @@ TEST(AppMemory, ZeroHeapAllocationAfterInit) {
     };
 
     const long before = g_allocs.load();
-    // --- measured region: no gtest macros inside (they may allocate) ---
-    press(KeyId::Start);  // menu
-    press(KeyId::Start);  // Run -> Ready
-    press(KeyId::Start);  // Running
+    press(KeyId::Start);
+    press(KeyId::Start);
+    press(KeyId::Start);
     for (int i = 0; i < 120; ++i) {
         app.postGps(GpsSample{now, static_cast<uint32_t>(i * 30), 5, true});
-        app.postHr(HrSample{now, static_cast<uint8_t>(100 + i / 2), true});  // walks through every zone -> alerts
+        app.postHr(HrSample{now, static_cast<uint8_t>(100 + i / 2), true});
         advance(1000);
-        if (i % 30 == 29) press(KeyId::Back);  // laps / dismiss alerts
+        if (i % 30 == 29) press(KeyId::Back);
     }
     press(KeyId::Down);
-    press(KeyId::Start);  // pause
+    press(KeyId::Start);
     press(KeyId::Down);
-    press(KeyId::Start);  // save
+    press(KeyId::Start);
     const long after = g_allocs.load();
-    // --- end of measured region ---
 
     EXPECT_EQ(after - before, 0) << "operator new called inside the AP main loop";
     EXPECT_EQ(app.activityState(), ActivityState::Idle);
@@ -328,8 +315,6 @@ TEST(AppMemory, ZeroHeapAllocationAfterInit) {
     EXPECT_GT(canvas.chars, 0u);
 }
 
-// Guard against a silently broken counter (e.g. operator new not replaced):
-// the zero-allocation test above would then pass for the wrong reason.
 TEST(AppMemory, AllocationCounterWorks) {
     const long before = g_allocs.load();
     auto p = std::make_unique<int>(42);

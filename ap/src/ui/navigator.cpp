@@ -53,4 +53,4 @@ bool Navigator::handle(const GestureEvent& e) {
     return false;
 }
 
-}  // namespace ap
+}

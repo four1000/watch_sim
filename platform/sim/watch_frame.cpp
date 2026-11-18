@@ -13,7 +13,6 @@ constexpr int kBezelR = 252;
 constexpr int kDisplayR = WatchFrame::kDisplayPx / 2;
 
 cv::Rect buttonAt(double clockDeg) {
-    // clockDeg: 0 = 3 o'clock, clockwise (screen coordinates).
     const double rad = clockDeg * 3.14159265358979 / 180.0;
     const int cx = kCenter + static_cast<int>(std::cos(rad) * (kCaseR + 10));
     const int cy = kCenter + static_cast<int>(std::sin(rad) * (kCaseR + 10));
@@ -31,7 +30,7 @@ const char* label(ap::KeyId k) {
     }
     return "";
 }
-}  // namespace
+}
 
 WatchFrame::WatchFrame() {
     m_buttons[ap::keyIndex(ap::KeyId::Light)] = buttonAt(215);
@@ -46,7 +45,6 @@ WatchFrame::WatchFrame() {
 
 void WatchFrame::draw(cv::Mat& frame, cv::Point origin, const cv::Mat& display, const State& s) const {
     const cv::Point c = origin + cv::Point(kCenter, kCenter);
-    // A vibrating watch shakes a little.
     const cv::Point shake = s.vibrating ? cv::Point((cv::getTickCount() / 200000) % 2 ? 3 : -3, 0) : cv::Point();
 
     for (std::size_t i = 0; i < m_buttons.size(); ++i) {
@@ -57,7 +55,6 @@ void WatchFrame::draw(cv::Mat& frame, cv::Point origin, const cv::Mat& display, 
         const ap::KeyId k = static_cast<ap::KeyId>(i);
         int base = 0;
         const cv::Size ts = cv::getTextSize(label(k), cv::FONT_HERSHEY_SIMPLEX, 0.38, 1, &base);
-        // Label on the part of the button that sticks out of the case.
         const bool left = (k == ap::KeyId::Light || k == ap::KeyId::Up || k == ap::KeyId::Down);
         const int tx = left ? r.x + 3 : r.x + r.width - ts.width - 3;
         cv::putText(frame, label(k), cv::Point(tx, r.y + r.height / 2 + ts.height / 2), cv::FONT_HERSHEY_SIMPLEX, 0.38,
@@ -70,9 +67,9 @@ void WatchFrame::draw(cv::Mat& frame, cv::Point origin, const cv::Mat& display, 
 
     cv::Mat shown;
     if (s.backlight) {
-        shown = display;  // the AP already switched to the light theme (white background, dark text)
+        shown = display;
     } else {
-        display.convertTo(shown, -1, 0.78, 0.0);  // transflective display without light
+        display.convertTo(shown, -1, 0.78, 0.0);
     }
     const cv::Rect roi(c.x - kDisplayR + shake.x, c.y - kDisplayR + shake.y, kDisplayPx, kDisplayPx);
     shown.copyTo(frame(roi), m_mask);
@@ -88,4 +85,4 @@ bool WatchFrame::hit(cv::Point origin, cv::Point p, ap::KeyId& key) const {
     return false;
 }
 
-}  // namespace sim
+}
