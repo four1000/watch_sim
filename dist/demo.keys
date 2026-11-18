@@ -1,0 +1,56 @@
+# Scripted demo: watch_sim --script docs/demo.keys --out shots
+# Virtual time, deterministic. Each `shot` writes a PNG of the whole window.
+
+hr 72
+wait 3000
+shot 01_watch_face.png
+
+press START                 # watch face -> activity menu
+shot 02_activity_menu.png
+
+press START                 # "Run" -> session Idle -> Ready, GPS starts
+wait 1000
+shot 03_ready_acquiring_gps.png
+wait 3000
+shot 04_ready_gps_fix.png
+
+speed 11
+hr 128                      # zone 2 = target zone
+press START                 # Ready -> Running
+wait 60000
+shot 05_running_timer.png
+
+press DOWN                  # next data page: heart rate
+shot 06_running_hr_page.png
+
+hr 176                      # push HR up: out of target zone -> alert after 3 s debounce
+wait 4500
+shot 07_hr_alert.png
+
+press BACK                  # modal alert consumes the key (no lap taken)
+hr 128
+wait 20000
+
+press DOWN                  # lap page
+press BACK                  # lap
+shot 08_lap_toast.png
+wait 30000
+shot 09_lap_page.png
+
+double LIGHT                # key lock
+shot 10_key_locked.png
+press START                 # swallowed by KeyLockHandler
+double LIGHT                # unlock
+
+press START                 # Running -> Paused, coordinator pushes pause menu
+wait 1500
+shot 11_pause_menu.png
+
+fault save on
+press DOWN                  # Save
+press START
+shot 12_save_failed.png
+press BACK                  # dismiss modal
+fault save off
+press START                 # Save again
+shot 13_saved_back_home.png

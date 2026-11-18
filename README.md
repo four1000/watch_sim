@@ -69,6 +69,25 @@ app/main.cpp        composition root
 tests/              GoogleTest suite (78 tests), fakes for every service
 third_party/        OpenCV 4.10 (release DLL), cvui 2.9, GoogleTest 1.15 (vendored)
 docs/               architecture, design decisions, demo script
+dist/               prebuilt Release binary with every DLL it needs
+```
+
+## Run the prebuilt binary (no build needed)
+
+`dist/` holds a Release build of `watch_sim.exe` with every non-Windows DLL next to it: `opencv_world4100.dll` and the MSVC C++ runtime (`msvcp140*.dll`, `vcruntime140*.dll`, `concrt140.dll`). You don't need to install Visual Studio or the VC++ Redistributable. Copy the folder anywhere and run:
+
+```bash
+dist\watch_sim.exe                                   # interactive
+dist\watch_sim.exe --script dist\demo.keys --out shots   # headless demo, writes PNGs
+```
+
+Requirements: Windows 10/11 x64. Windows 10/11 already ships the Universal CRT. On "N" editions, install the Media Feature Pack, because `opencv_world` links Media Foundation (`mf.dll`, `mfplat.dll`).
+
+To rebuild `dist/` from source:
+
+```bash
+cmake --build build --config Release --target watch_sim
+cmake --install build --config Release --prefix dist
 ```
 
 ## Build and run

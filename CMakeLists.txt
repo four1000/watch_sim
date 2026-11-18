@@ -58,3 +58,16 @@ add_custom_command(TARGET watch_sim POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
           ${OPENCV_DLL} $<TARGET_FILE_DIR:watch_sim>)
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT watch_sim)
+
+# -----------------------------------------------------------------------------
+# Portable binary: cmake --install build --config Release --prefix dist
+# Puts watch_sim.exe next to every non-system DLL it needs: opencv_world and
+# the MSVC C++ runtime (app-local deployment, so no VC++ Redistributable install
+# is required). Everything else it imports is part of Windows itself.
+# -----------------------------------------------------------------------------
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION .)
+set(CMAKE_INSTALL_UCRT_LIBRARIES OFF)   # UCRT ships with Windows 10/11
+include(InstallRequiredSystemLibraries)
+install(TARGETS watch_sim RUNTIME DESTINATION . CONFIGURATIONS Release)
+install(FILES ${OPENCV_DLL} DESTINATION . CONFIGURATIONS Release)
+install(FILES docs/demo.keys DESTINATION . CONFIGURATIONS Release)
