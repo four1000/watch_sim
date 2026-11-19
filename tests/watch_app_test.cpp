@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <atomic>
 #include <cstdlib>
 #include <memory>
@@ -32,7 +33,7 @@ struct App : ::testing::Test {
     fakes::FakeBacklight backlight;
     fakes::FakeClock clock;
     fakes::NullMutex mutex;
-    WatchApp app{WatchApp::Services{gps, hr, recorder, vibrator, backlight, clock, mutex}};
+    WatchApp app{WatchApp::Services{gps, hr, recorder, recorder, vibrator, backlight, clock, mutex}};
     fakes::FakeCanvas canvas;
     TickMs now = 1000;
 
@@ -87,11 +88,83 @@ TEST_F(App, FullRunFlowThroughKeys) {
     press(KeyId::Down);
     press(KeyId::Start);
     EXPECT_EQ(app.activityState(), ActivityState::Idle);
-    EXPECT_EQ(top(), "WatchFace") << "flow coordinator returns home";
+    EXPECT_EQ(top(), "ActivityDetail") << "saved activity summary on top of home";
+    EXPECT_EQ(app.navigator().depth(), 2u);
     EXPECT_FALSE(gps.running);
     EXPECT_EQ(recorder.finishes, 1);
     EXPECT_EQ(recorder.summary.distanceDm, 270u);
     EXPECT_STREQ(app.overlayTitle(), "SAVED");
+    press(KeyId::Back);
+    EXPECT_EQ(top(), "WatchFace");
+}
+
+TEST_F(App, SummaryShowsSavedActivityAndScrollsThroughLaps) {
+    press(KeyId::Start);
+    press(KeyId::Start);
+    press(KeyId::Start);
+    for (int lap = 0; lap < 6; ++lap) {
+        for (int s = 0; s < 3; ++s) {
+            app.postGps(GpsSample{now, static_cast<uint32_t>((lap * 3 + s) * 30), 5, true});
+            advance(1000);
+        }
+        press(KeyId::Back);
+    }
+    press(KeyId::Start);
+    press(KeyId::Down);
+    press(KeyId::Start);
+    ASSERT_EQ(top(), "ActivityDetail");
+    advance(3000);
+
+    app.render(canvas);
+    EXPECT_TRUE(canvas.shows("18 NOV 08:42"));
+    EXPECT_TRUE(canvas.shows("7 LAPS")) << "6 manual laps + the final lap closed on save";
+
+    press(KeyId::Down);
+    app.render(canvas);
+    EXPECT_TRUE(canvas.showsExactly("PACE"));
+    EXPECT_TRUE(canvas.showsExactly("1"));
+    EXPECT_TRUE(canvas.showsExactly("4"));
+    EXPECT_FALSE(canvas.showsExactly("5")) << "four rows visible";
+    for (int i = 0; i < 10; ++i) press(KeyId::Down);
+    app.render(canvas);
+    EXPECT_FALSE(canvas.showsExactly("3"));
+    EXPECT_TRUE(canvas.showsExactly("4"));
+    EXPECT_TRUE(canvas.showsExactly("7")) << "stops with the last lap on the last row";
+
+    press(KeyId::Back);
+    EXPECT_EQ(top(), "WatchFace");
+}
+
+TEST_F(App, HistoryListsSavedActivitiesNewestFirst) {
+    press(KeyId::Start);
+    press(KeyId::Down);
+    press(KeyId::Start);
+    EXPECT_EQ(top(), "History");
+    app.render(canvas);
+    EXPECT_TRUE(canvas.shows("NO ACTIVITIES"));
+    press(KeyId::Start);
+    EXPECT_EQ(top(), "History") << "nothing to open";
+
+    recorder.addToHistory(ActivityRecord{LocalTime{2026, 11, 16, 1, 7, 5, 0}, ActivitySummary{1800000, 50000, 0, 140, 160}},
+                          {});
+    recorder.addToHistory(ActivityRecord{LocalTime{2026, 11, 17, 2, 18, 30, 0}, ActivitySummary{600000, 21000, 0, 0, 0}},
+                          {});
+    app.render(canvas);
+    EXPECT_TRUE(canvas.shows("17 NOV 18:30")) << "newest selected";
+    EXPECT_TRUE(canvas.shows("2.10 km"));
+    EXPECT_TRUE(canvas.shows("16 NOV 07:05")) << "older one below";
+
+    press(KeyId::Down);
+    press(KeyId::Start);
+    EXPECT_EQ(top(), "ActivityDetail");
+    app.render(canvas);
+    EXPECT_TRUE(canvas.shows("16 NOV 07:05"));
+    EXPECT_TRUE(canvas.shows("5.00 km"));
+    EXPECT_TRUE(canvas.shows("6:00 /km"));
+    press(KeyId::Back);
+    EXPECT_EQ(top(), "History");
+    press(KeyId::Back);
+    EXPECT_EQ(top(), "ACTIVITY");
 }
 
 TEST_F(App, ClockHiddenInsideRunAndSettings) {
@@ -106,10 +179,15 @@ TEST_F(App, ClockHiddenInsideRunAndSettings) {
 
     press(KeyId::Down);
     press(KeyId::Start);
+    EXPECT_EQ(top(), "History");
+    EXPECT_FALSE(clockShown()) << "history";
+    press(KeyId::Back);
+    press(KeyId::Down);
+    press(KeyId::Down);
+    press(KeyId::Start);
     EXPECT_EQ(top(), "Settings");
     EXPECT_FALSE(clockShown()) << "settings";
     press(KeyId::Back);
-    press(KeyId::Up);
 
     press(KeyId::Start);
     EXPECT_EQ(top(), "ActivityData");
@@ -215,6 +293,7 @@ TEST_F(App, BacklightSwitchesToWhiteBackgroundWithDarkText) {
 TEST_F(App, SettingsReachableFromMenuAndBackReturns) {
     press(KeyId::Start);
     press(KeyId::Down);
+    press(KeyId::Down);
     press(KeyId::Start);
     EXPECT_EQ(top(), "Settings");
     press(KeyId::Back);
@@ -241,12 +320,37 @@ TEST_F(App, RendersOnlyWhenDirty) {
 
 namespace {
 
-struct QuietRecorder final : IActivityRecorder {
-    bool begin(TickMs) override { return true; }
-    bool recordLap(const LapRecord&) override { ++laps; return true; }
-    bool finish(const ActivitySummary&) override { ++finishes; return true; }
+struct QuietRecorder final : IActivityRecorder, IActivityHistory {
+    static constexpr std::size_t kMaxLaps = 8;
+
+    bool begin(TickMs) override { laps = 0; return true; }
+    bool recordLap(const LapRecord& lap) override {
+        if (laps < kMaxLaps) lapStore[laps++] = lap;
+        return true;
+    }
+    bool finish(const ActivitySummary& s) override {
+        ++finishes;
+        saved = ActivityRecord{LocalTime{2026, 11, 18, 3, 8, 42, 0}, s};
+        return true;
+    }
     void discard() override {}
-    int laps = 0, finishes = 0;
+
+    std::size_t activityCount() const override { return finishes > 0 ? 1 : 0; }
+    bool activityAt(std::size_t i, ActivityRecord& out) const override {
+        if (i >= activityCount()) return false;
+        out = saved;
+        return true;
+    }
+    bool lapAt(std::size_t i, std::size_t lap, LapRecord& out) const override {
+        if (i >= activityCount() || lap >= laps) return false;
+        out = lapStore[lap];
+        return true;
+    }
+
+    std::array<LapRecord, kMaxLaps> lapStore{};
+    std::size_t laps = 0;
+    int finishes = 0;
+    ActivityRecord saved{};
 };
 struct QuietVibrator final : IVibrator {
     void vibrate(VibePattern) override { ++count; }
@@ -274,7 +378,7 @@ TEST(AppMemory, ZeroHeapAllocationAfterInit) {
     fakes::FakeClock clock;
     fakes::NullMutex mutex;
     QuietCanvas canvas;
-    WatchApp app{WatchApp::Services{gps, hr, recorder, vibrator, backlight, clock, mutex}};
+    WatchApp app{WatchApp::Services{gps, hr, recorder, recorder, vibrator, backlight, clock, mutex}};
     TickMs now = 0;
     ASSERT_TRUE(app.init(now));
 
@@ -306,6 +410,16 @@ TEST(AppMemory, ZeroHeapAllocationAfterInit) {
     press(KeyId::Start);
     press(KeyId::Down);
     press(KeyId::Start);
+    EXPECT_STREQ(app.topScreenName(), "ActivityDetail");
+    for (int i = 0; i < 6; ++i) press(KeyId::Down);
+    press(KeyId::Back);
+    press(KeyId::Start);
+    press(KeyId::Down);
+    press(KeyId::Start);
+    EXPECT_STREQ(app.topScreenName(), "History");
+    press(KeyId::Start);
+    press(KeyId::Down);
+    EXPECT_STREQ(app.topScreenName(), "ActivityDetail");
     const long after = g_allocs.load();
 
     EXPECT_EQ(after - before, 0) << "operator new called inside the AP main loop";

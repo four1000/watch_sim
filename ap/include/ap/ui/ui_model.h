@@ -24,4 +24,7 @@ struct UiModel {
 const char* formatDuration(uint32_t ms, char* buf, std::size_t len);
 const char* formatDistanceKm(uint32_t dm, char* buf, std::size_t len);
 const char* formatPace(uint16_t secPerKm, char* buf, std::size_t len);
+const char* formatDayMonthTime(const LocalTime& t, char* buf, std::size_t len);
+const char* monthAbbrev(uint8_t month);
+uint16_t paceSecPerKm(uint32_t durationMs, uint32_t distanceDm);
 }

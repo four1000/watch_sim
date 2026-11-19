@@ -26,12 +26,44 @@ public:
     bool running = false;
 };
 
-class FakeRecorder final : public ap::IActivityRecorder {
+class FakeRecorder final : public ap::IActivityRecorder, public ap::IActivityHistory {
 public:
-    bool begin(ap::TickMs t) override { ++begins; beganAt = t; return beginOk; }
-    bool recordLap(const ap::LapRecord& lap) override { laps.push_back(lap); return true; }
-    bool finish(const ap::ActivitySummary& s) override { ++finishes; summary = s; return finishOk; }
+    bool begin(ap::TickMs t) override {
+        ++begins;
+        beganAt = t;
+        m_current.clear();
+        return beginOk;
+    }
+    bool recordLap(const ap::LapRecord& lap) override {
+        laps.push_back(lap);
+        m_current.push_back(lap);
+        return true;
+    }
+    bool finish(const ap::ActivitySummary& s) override {
+        ++finishes;
+        summary = s;
+        if (finishOk) addToHistory(ap::ActivityRecord{startTime, s}, m_current);
+        return finishOk;
+    }
     void discard() override { ++discards; }
+
+    std::size_t activityCount() const override { return m_history.size(); }
+    bool activityAt(std::size_t i, ap::ActivityRecord& out) const override {
+        if (i >= m_history.size()) return false;
+        out = m_history[m_history.size() - 1 - i].record;
+        return true;
+    }
+    bool lapAt(std::size_t i, std::size_t lap, ap::LapRecord& out) const override {
+        if (i >= m_history.size()) return false;
+        const auto& stored = m_history[m_history.size() - 1 - i];
+        if (lap >= stored.laps.size()) return false;
+        out = stored.laps[lap];
+        return true;
+    }
+
+    void addToHistory(const ap::ActivityRecord& record, const std::vector<ap::LapRecord>& recordLaps) {
+        m_history.push_back(Stored{record, recordLaps});
+    }
 
     bool beginOk = true;
     bool finishOk = true;
@@ -39,6 +71,15 @@ public:
     ap::TickMs beganAt = 0;
     std::vector<ap::LapRecord> laps;
     ap::ActivitySummary summary{};
+    ap::LocalTime startTime{2026, 11, 18, 3, 8, 42, 0};
+
+private:
+    struct Stored {
+        ap::ActivityRecord record;
+        std::vector<ap::LapRecord> laps;
+    };
+    std::vector<ap::LapRecord> m_current;
+    std::vector<Stored> m_history;
 };
 
 class FakeVibrator final : public ap::IVibrator {
@@ -89,6 +130,12 @@ public:
     bool shows(const std::string& s) const {
         for (const auto& t : texts) {
             if (t.find(s) != std::string::npos) return true;
+        }
+        return false;
+    }
+    bool showsExactly(const std::string& s) const {
+        for (const auto& t : texts) {
+            if (t == s) return true;
         }
         return false;
     }

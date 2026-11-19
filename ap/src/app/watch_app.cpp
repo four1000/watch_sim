@@ -14,7 +14,10 @@ WatchApp::WatchApp(const Services& s)
       m_watchFace(m_nav, m_activityMenu),
       m_dataScreen(m_session),
       m_settingsScreen(m_settings),
+      m_detailScreen(s.history),
+      m_historyScreen(s.history, m_nav, m_detailScreen),
       m_cmdRun(m_session, &IActivityControl::prepare),
+      m_cmdHistory(m_nav, m_historyScreen),
       m_cmdSettings(m_nav, m_settingsScreen),
       m_cmdResume(m_session, &IActivityControl::startPause),
       m_cmdSave(m_session, &IActivityControl::save),
@@ -22,7 +25,7 @@ WatchApp::WatchApp(const Services& s)
       m_keyLock(m_bus),
       m_overlay(m_bus, m_timers, s.vibrator),
       m_backlight(s.backlight, m_timers),
-      m_flow(m_bus, m_nav, m_watchFace, m_dataScreen, m_pauseMenu) {}
+      m_flow(m_bus, m_nav, m_watchFace, m_dataScreen, m_pauseMenu, m_detailScreen) {}
 
 bool WatchApp::init(TickMs now) {
     if (m_initialized) return false;
@@ -34,6 +37,7 @@ bool WatchApp::init(TickMs now) {
     m_sub = m_bus.subscribe(*this, topics(EventType::Gesture, EventType::SecondTick));
 
     m_activityMenu.addItem("Run", m_cmdRun);
+    m_activityMenu.addItem("History", m_cmdHistory);
     m_activityMenu.addItem("Settings", m_cmdSettings);
     m_pauseMenu.addItem("Resume", m_cmdResume);
     m_pauseMenu.addItem("Save", m_cmdSave);

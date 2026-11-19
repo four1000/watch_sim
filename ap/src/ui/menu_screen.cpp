@@ -44,12 +44,7 @@ void MenuScreen::onRender(ICanvas& c, const UiModel&) {
         c.drawText(cx, static_cast<int16_t>(cy + 52), m_items[m_selected + 1].label, Font::Medium, Color::Gray,
                    Align::Center);
     }
-    const int16_t r = static_cast<int16_t>(cx - 6);
-    const int span = 60;
-    const int seg = span / static_cast<int>(m_count);
-    const int start = -span / 2 + seg * static_cast<int>(m_selected);
-    c.drawArc(cx, cy, r, -span / 2, span / 2, 3, Color::DarkGray);
-    c.drawArc(cx, cy, r, static_cast<int16_t>(start), static_cast<int16_t>(start + seg), 3, Color::White);
+    drawListPosition(c, m_selected, m_count);
 }
 
 }

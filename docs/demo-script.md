@@ -12,10 +12,11 @@ Start: `build\RelWithDebInfo\watch_sim.exe --trace`. Put the console next to the
 | 6 | HR slider to 175 | Zone changes with hysteresis. After 3 s out of the target zone, a **modal** alert appears. |
 | 7 | Press BACK **while the alert is up** (it closes itself after 3 s) | Alert dismissed, and **no lap taken**: the overlay sits before the screen in the input chain. |
 | 8 | Double LIGHT, then press START | Key lock. START is swallowed by the first handler in the chain. Double LIGHT again unlocks. |
-| 9 | START (pause), tick *Save fails*, choose Save | `Paused → Paused (save failed)`: the state machine refuses to lose data. Untick and save again → `SAVED`, back to the watch face, CSV written. |
-| 10 | Tick *GPS start fails*, start a run | `START FAILED`, and the session stays Idle. Error handling with return values and events, no exceptions. |
+| 9 | START (pause), tick *Save fails*, choose Save | `Paused → Paused (save failed)`: the state machine refuses to lose data. Untick and save again → `SAVED`, CSV written, and the **coordinator** shows the activity summary. DOWN scrolls the lap table, BACK returns to the watch face. |
+| 10 | START → *History* → START | The run just saved is on top (newest first). Same detail screen as step 9, opened from a different place: it only knows "show activity *i*". |
+| 11 | Tick *GPS start fails*, start a run | `START FAILED`, and the session stays Idle. Error handling with return values and events, no exceptions. |
 
-Close with the tests: `ctest` → 84 tests, including **zero heap allocations after init** and **tick wrap**. If asked: `--wrap` starts 30 s before the 32-bit tick overflow.
+Close with the tests: `ctest` → 91 tests, including **zero heap allocations after init** and **tick wrap**. If asked: `--wrap` starts 30 s before the 32-bit tick overflow.
 
 ## Questions to expect
 

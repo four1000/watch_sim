@@ -8,6 +8,10 @@ The backend (GPS, optical HR, storage) is simulated. The graphics are deliberate
 |---|---|---|---|---|
 | ![](docs/images/01_watch_face.png) | ![](docs/images/05_running_timer.png) | ![](docs/images/06_running_hr_page.png) | ![](docs/images/07_hr_alert.png) | ![](docs/images/11_pause_menu.png) |
 
+| Activity summary | Lap table | History |
+|---|---|---|
+| ![](docs/images/13_activity_summary.png) | ![](docs/images/14_lap_table.png) | ![](docs/images/16_history.png) |
+
 ## What the AP layer does
 
 ```
@@ -41,6 +45,7 @@ The backend (GPS, optical HR, storage) is simulated. The graphics are deliberate
 | Timeouts without blocking | Soft timers with generation-checked handles | [`soft_timer`](ap/src/core/soft_timer.cpp) |
 | Rendering library must be swappable | Adapter (`ICanvas` → OpenCV) | [`opencv_canvas`](platform/sim/opencv_canvas.cpp) |
 | Backlight on → white background, dark text, without touching any screen | Decorator (`ThemedCanvas` wraps `ICanvas`, swaps the palette) | [`themed_canvas.h`](ap/include/ap/ui/themed_canvas.h) |
+| Past activities and laps live in storage, not in RAM | Read-only query interface (`IActivityHistory`), copy-out into caller buffers; one detail screen reused for the post-save summary and the history | [`services.h`](ap/include/ap/services/services.h), [`activity_detail_screen`](ap/src/ui/activity_detail_screen.cpp) |
 
 ## Embedded constraints, enforced by the build
 
@@ -67,7 +72,7 @@ ap/                 portable application layer (the interesting part)
   services/         interfaces the AP layer needs (GPS, HR, recorder, ...)
 platform/sim/       simulator: OpenCV canvas, sensor thread, CSV recorder, dev panel
 app/main.cpp        composition root
-tests/              GoogleTest suite (84 tests), fakes for every service
+tests/              GoogleTest suite (91 tests), fakes for every service
 third_party/        OpenCV 4.10 (release DLL), cvui 2.9, GoogleTest 1.15 (vendored)
 docs/               architecture, design decisions, demo script
 dist/               prebuilt Release binary with every DLL it needs
@@ -98,7 +103,7 @@ Requirements: Windows x64, Visual Studio 2019 or newer (MSVC), CMake ≥ 3.20. A
 ```bash
 cmake -S . -B build
 cmake --build build --config RelWithDebInfo
-ctest --test-dir build -C RelWithDebInfo          # 84 tests
+ctest --test-dir build -C RelWithDebInfo          # 91 tests
 build\RelWithDebInfo\watch_sim.exe                 # interactive
 build\RelWithDebInfo\watch_sim.exe --trace         # + event trace on the console
 build\RelWithDebInfo\watch_sim.exe --script docs/demo.keys --out shots   # headless, writes PNGs

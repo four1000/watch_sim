@@ -83,8 +83,8 @@ struct Simulator {
     sim::StdMutex inboxMutex;
     sim::SimVibrator vibrator;
     sim::SimBacklight backlight;
-    sim::CsvActivityRecorder recorder{"activities"};
     std::unique_ptr<sim::SimWallClock> clock;
+    std::unique_ptr<sim::CsvActivityRecorder> recorder;
     std::unique_ptr<ap::WatchApp> app;
 
     sim::OpenCvCanvas canvas{240, 2};
@@ -97,13 +97,15 @@ struct Simulator {
     ap::TickMs vibeUntil = 0;
     KeyLevels keyLevel{};
 
-    void build(std::unique_ptr<sim::SimWallClock> wallClock) {
+    void build(std::unique_ptr<sim::SimWallClock> wallClock, bool loadHistory) {
         clock = std::move(wallClock);
+        recorder = std::make_unique<sim::CsvActivityRecorder>("activities", *clock);
+        if (loadHistory) recorder->loadExisting();
         app = std::make_unique<ap::WatchApp>(ap::WatchApp::Services{
-            sensors.gps(), sensors.hr(), recorder, vibrator, backlight, *clock, inboxMutex});
+            sensors.gps(), sensors.hr(), *recorder, *recorder, vibrator, backlight, *clock, inboxMutex});
         sensors.connect(*app);
         app->setTrace(&trace);
-        panel = std::make_unique<sim::DevPanel>(world, recorder, trace);
+        panel = std::make_unique<sim::DevPanel>(world, *recorder, trace);
     }
 
     void setKeys(const KeyLevels& levels, ap::TickMs now) {
@@ -139,7 +141,7 @@ int runInteractive(const Options& opt) {
     sim::SimTick tick(opt.wrap ? kWrapStartTick : 0u);
     Simulator s(kOdometerStart);
     s.trace.printToStdout = opt.trace;
-    s.build(std::make_unique<sim::SimWallClock>());
+    s.build(std::make_unique<sim::SimWallClock>(), true);
     s.app->init(tick.now());
 
     cvui::init(kWindow);
@@ -191,7 +193,7 @@ int runScript(const Options& opt) {
     ap::TickMs elapsed = 0;
     Simulator s(kOdometerStart);
     s.trace.printToStdout = true;
-    s.build(std::make_unique<sim::SimWallClock>(ap::LocalTime{2026, 11, 18, 3, 8, 42, 0}, &elapsed));
+    s.build(std::make_unique<sim::SimWallClock>(ap::LocalTime{2026, 11, 18, 3, 8, 42, 0}, &elapsed), false);
     s.app->init(now);
     cvui::init(kWindow, -1, false, true);
 
@@ -246,8 +248,10 @@ int runScript(const Options& opt) {
             ss >> v;
             const bool on = (v != "off");
             if (arg == "gps") s.world.gpsHardwareFault = on;
-            else if (arg == "storage") s.recorder.failBegin = on;
-            else if (arg == "save") s.recorder.failFinish = on;
+            else if (arg == "storage") s.recorder->failBegin = on;
+            else if (arg == "save") s.recorder->failFinish = on;
+        } else if (cmd == "history" && arg == "load") {
+            std::cout << "[history] loaded " << s.recorder->loadExisting() << " activities\n";
         } else if (cmd == "shot") {
             s.app->render(s.canvas);
             s.compose(now);

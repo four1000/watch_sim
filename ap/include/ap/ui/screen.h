@@ -36,6 +36,7 @@ protected:
     virtual bool showsClock() const { return true; }
 
     TickMs enteredAt() const { return m_enteredAt; }
+    static void drawListPosition(ICanvas& c, std::size_t index, std::size_t count);
 
 private:
     static void drawStatusBar(ICanvas& c, const UiModel& m, bool clock);

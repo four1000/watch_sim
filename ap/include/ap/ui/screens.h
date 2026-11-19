@@ -102,4 +102,54 @@ private:
     Row m_row = Row::MaxHr;
     bool m_editing = false;
 };
+
+class ActivityDetailScreen final : public Screen {
+public:
+    static constexpr std::size_t kVisibleLaps = 4;
+
+    explicit ActivityDetailScreen(const IActivityHistory& history) : m_history(history) {}
+    const char* name() const override { return "ActivityDetail"; }
+
+    void select(std::size_t indexFromNewest) { m_activity = indexFromNewest; }
+    std::size_t selectedActivity() const { return m_activity; }
+    bool showingSummary() const { return m_scroll == 0; }
+    std::size_t firstVisibleLap() const { return m_scroll == 0 ? 0 : m_scroll - 1; }
+
+protected:
+    void onEnter(TickMs now) override;
+    bool onGesture(const GestureEvent& e) override;
+    void onRender(ICanvas& c, const UiModel& m) override;
+    bool showsClock() const override { return false; }
+
+private:
+    std::size_t lastScroll() const;
+    void renderSummary(ICanvas& c, const ActivityRecord& a) const;
+    void renderLaps(ICanvas& c, const ActivityRecord& a) const;
+
+    const IActivityHistory& m_history;
+    std::size_t m_activity = 0;
+    std::size_t m_scroll = 0;
+};
+
+class HistoryScreen final : public Screen {
+public:
+    HistoryScreen(const IActivityHistory& history, Navigator& nav, ActivityDetailScreen& detail)
+        : m_history(history), m_nav(nav), m_detail(detail) {}
+    const char* name() const override { return "History"; }
+    std::size_t selected() const { return m_selected; }
+
+protected:
+    void onEnter(TickMs now) override;
+    bool onGesture(const GestureEvent& e) override;
+    void onRender(ICanvas& c, const UiModel& m) override;
+    bool showsClock() const override { return false; }
+
+private:
+    void renderEntry(ICanvas& c, std::size_t index, int16_t y, bool selected) const;
+
+    const IActivityHistory& m_history;
+    Navigator& m_nav;
+    ActivityDetailScreen& m_detail;
+    std::size_t m_selected = 0;
+};
 }

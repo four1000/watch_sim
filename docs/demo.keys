@@ -52,5 +52,17 @@ press START
 shot 12_save_failed.png
 press BACK                  # dismiss modal
 fault save off
-press START                 # Save again
-shot 13_saved_back_home.png
+press START                 # Save again -> coordinator shows the activity summary
+wait 2500
+shot 13_activity_summary.png
+press DOWN                  # lap table
+shot 14_lap_table.png
+press BACK                  # back to the watch face
+shot 15_back_home.png
+
+press START                 # activity menu
+press DOWN                  # History
+press START
+shot 16_history.png
+press START                 # open the selected activity
+shot 17_history_detail.png

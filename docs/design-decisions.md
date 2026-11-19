@@ -55,12 +55,26 @@ With the backlight on, the display switches to a white background with dark text
 
 The theme lives in the AP layer, not in the OpenCV adapter: it is a presentation rule, and it has to be identical on the real display driver. A backlight change (key or 8 s timeout) marks the frame dirty, so the redraw does not wait for the next 1 s tick.
 
+### History: the one place where screens query a service
+
+Past activities do not fit the per-frame snapshot: 32 laps × N activities is storage, not view state. The history screens get a **read-only** `IActivityHistory` and ask for one record at a time:
+
+| Choice | Why |
+|---|---|
+| `activityAt(i, out)` / `lapAt(i, lap, out)` copy into the caller's struct | no pointer into backend memory, no heap in the AP layer, no lifetime question if storage is compacted |
+| index 0 = newest | the list and the post-save summary both start from the latest run; the backend decides how far back it keeps |
+| one `ActivityDetailScreen` for "just saved" and "from history" | the coordinator only calls `select(0)` and pushes it. The screen does not know why it was opened |
+| `const IActivityHistory&` | the screens cannot write history; only the session writes, through `IActivityRecorder` |
+
+On the watch, `activityAt` would read the FIT file header from flash, and `lapAt` a lap message. The simulator keeps the records in a vector and reloads the CSV files at start-up.
+
 ## 6. Narrow interfaces (ISP)
 
 | Client | Sees | Does not see |
 |---|---|---|
 | `ActivityDataScreen`, menu commands | `IActivityControl` | recorder, GPS, metrics internals |
 | `SettingsScreen` | `ISettingsEditor` | the event bus |
+| `ActivityDetailScreen`, `HistoryScreen` | `const IActivityHistory&` | the recorder, the session |
 | `ActivitySession` | `IGpsService`, `IActivityRecorder` | the platform |
 
 ## 7. Embedded subset

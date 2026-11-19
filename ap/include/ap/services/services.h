@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #include "ap/core/time.h"
@@ -90,6 +91,19 @@ class IWallClock {
 public:
     AP_INTERFACE(IWallClock)
     virtual LocalTime now() const = 0;
+};
+
+struct ActivityRecord {
+    LocalTime start;
+    ActivitySummary summary;
+};
+
+class IActivityHistory {
+public:
+    AP_INTERFACE(IActivityHistory)
+    virtual std::size_t activityCount() const = 0;
+    virtual bool activityAt(std::size_t indexFromNewest, ActivityRecord& out) const = 0;
+    virtual bool lapAt(std::size_t indexFromNewest, std::size_t lapIndex, LapRecord& out) const = 0;
 };
 
 #undef AP_INTERFACE

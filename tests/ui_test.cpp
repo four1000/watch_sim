@@ -289,3 +289,89 @@ TEST(Format, DurationsDistancesPaces) {
     EXPECT_STREQ(formatPace(0, b, sizeof b), "--:--");
     EXPECT_STREQ(formatPace(312, b, sizeof b), "5:12");
 }
+
+TEST(Formatting, PaceFromDurationAndDistance) {
+    EXPECT_EQ(paceSecPerKm(300000, 10000), 300u);
+    EXPECT_EQ(paceSecPerKm(300000, 0), 0u) << "no distance: unknown pace";
+    EXPECT_EQ(paceSecPerKm(UINT32_MAX, 1), 0u) << "slower than 99:59 /km is shown as unknown";
+    EXPECT_EQ(paceSecPerKm(99u * 60u * 1000u + 59u * 1000u, 10000), 5999u);
+    char b[24];
+    EXPECT_STREQ(formatDayMonthTime(LocalTime{2026, 1, 5, 1, 7, 3, 0}, b, sizeof b), "5 JAN 07:03");
+    EXPECT_STREQ(monthAbbrev(0), "---");
+    EXPECT_STREQ(monthAbbrev(13), "---");
+}
+
+namespace {
+GestureEvent tap(KeyId k) { return GestureEvent{k, Gesture::Short, 0}; }
+}
+
+TEST(ActivityDetailScreen, WithoutLapsDownStaysOnSummary) {
+    fakes::FakeRecorder history;
+    history.addToHistory(ActivityRecord{LocalTime{2026, 11, 18, 3, 8, 0, 0}, ActivitySummary{60000, 2000, 0, 0, 0}},
+                         {});
+    ActivityDetailScreen detail(history);
+    detail.select(0);
+    detail.enter(0);
+    EXPECT_TRUE(detail.handle(tap(KeyId::Down)));
+    EXPECT_TRUE(detail.showingSummary());
+    EXPECT_FALSE(detail.handle(tap(KeyId::Back))) << "BACK is left to the navigator";
+
+    fakes::FakeCanvas c;
+    detail.render(c, UiModel{});
+    EXPECT_TRUE(c.shows("HR --"));
+    EXPECT_FALSE(c.shows("LAPS"));
+}
+
+TEST(ActivityDetailScreen, ScrollStopsAtBothEnds) {
+    fakes::FakeRecorder history;
+    std::vector<LapRecord> laps;
+    for (uint16_t i = 1; i <= 6; ++i) laps.push_back(LapRecord{i, 60000, 2000, 150});
+    history.addToHistory(ActivityRecord{LocalTime{2026, 11, 18, 3, 8, 0, 0}, ActivitySummary{360000, 12000, 6, 150, 170}},
+                         laps);
+    ActivityDetailScreen detail(history);
+    detail.select(0);
+    detail.enter(0);
+
+    EXPECT_TRUE(detail.handle(tap(KeyId::Up)));
+    EXPECT_TRUE(detail.showingSummary());
+    for (int i = 0; i < 10; ++i) detail.handle(tap(KeyId::Down));
+    EXPECT_EQ(detail.firstVisibleLap(), 6u - ActivityDetailScreen::kVisibleLaps);
+    for (int i = 0; i < 10; ++i) detail.handle(tap(KeyId::Up));
+    EXPECT_TRUE(detail.showingSummary());
+
+    detail.handle(tap(KeyId::Down));
+    detail.enter(0);
+    EXPECT_TRUE(detail.showingSummary()) << "entering again starts at the summary";
+}
+
+TEST(ActivityDetailScreen, MissingActivityShowsNoData) {
+    fakes::FakeRecorder history;
+    ActivityDetailScreen detail(history);
+    detail.select(3);
+    fakes::FakeCanvas c;
+    detail.render(c, UiModel{});
+    EXPECT_TRUE(c.shows("NO DATA"));
+}
+
+TEST(HistoryScreen, SelectionIsLinearAndStartOpensTheSelectedActivity) {
+    fakes::FakeRecorder history;
+    for (uint8_t day = 10; day < 13; ++day) {
+        history.addToHistory(ActivityRecord{LocalTime{2026, 11, day, 0, 6, 0, 0}, ActivitySummary{}}, {});
+    }
+    Navigator nav;
+    ActivityDetailScreen detail(history);
+    HistoryScreen list(history, nav, detail);
+    nav.resetTo(list, 0);
+
+    EXPECT_TRUE(nav.handle(tap(KeyId::Up)));
+    EXPECT_EQ(list.selected(), 0u);
+    for (int i = 0; i < 5; ++i) nav.handle(tap(KeyId::Down));
+    EXPECT_EQ(list.selected(), 2u);
+
+    EXPECT_TRUE(nav.handle(tap(KeyId::Start)));
+    EXPECT_EQ(nav.top(), &detail);
+    EXPECT_EQ(detail.selectedActivity(), 2u);
+}
+
+static_assert(std::is_abstract_v<IActivityHistory>, "history is a service interface");
+static_assert(!std::is_copy_constructible_v<HistoryScreen>, "screens are entities");

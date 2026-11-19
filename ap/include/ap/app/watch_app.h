@@ -28,6 +28,7 @@ public:
         IGpsService& gps;
         IHeartRateService& hr;
         IActivityRecorder& recorder;
+        const IActivityHistory& history;
         IVibrator& vibrator;
         IBacklight& backlight;
         IWallClock& clock;
@@ -95,8 +96,11 @@ private:
     WatchFaceScreen m_watchFace;
     ActivityDataScreen m_dataScreen;
     SettingsScreen m_settingsScreen;
+    ActivityDetailScreen m_detailScreen;
+    HistoryScreen m_historyScreen;
 
     ActivityCommand m_cmdRun;
+    PushScreenCommand m_cmdHistory;
     PushScreenCommand m_cmdSettings;
     ActivityCommand m_cmdResume;
     ActivityCommand m_cmdSave;
