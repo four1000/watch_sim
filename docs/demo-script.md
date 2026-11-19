@@ -16,7 +16,7 @@ Start: `build\RelWithDebInfo\watch_sim.exe --trace`. Put the console next to the
 | 10 | START → *History* → START | The run just saved is on top (newest first). Same detail screen as step 9, opened from a different place: it only knows "show activity *i*". |
 | 11 | Tick *GPS start fails*, start a run | `START FAILED`, and the session stays Idle. Error handling with return values and events, no exceptions. |
 
-Close with the tests: `ctest` → 91 tests, including **zero heap allocations after init** and **tick wrap**. If asked: `--wrap` starts 30 s before the 32-bit tick overflow.
+Close with the tests: `ctest` → 93 tests, including **zero heap allocations after init** and **tick wrap**. If asked: `--wrap` starts 30 s before the 32-bit tick overflow.
 
 ## Questions to expect
 

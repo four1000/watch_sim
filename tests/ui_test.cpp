@@ -260,6 +260,34 @@ TEST(ActivityDataScreen, PagesCycleAndRenderFromModel) {
     EXPECT_EQ(screen.page(), ActivityDataScreen::Page::Lap);
 }
 
+TEST(ActivityDataScreen, HrGaugeEmphasisesCurrentZoneAndKeepsTargetBright) {
+    FakeControl ctl;
+    ActivityDataScreen screen(ctl);
+    screen.handle(press(KeyId::Down));
+    UiModel m;
+    m.activity.state = ActivityState::Running;
+    m.settings.targetZone = 2;
+    m.hrValid = true;
+    m.hrBpm = 151;
+    m.hrZone = 3;
+
+    fakes::FakeCanvas c;
+    screen.render(c, m);
+    ASSERT_NE(c.arcIn(Color::Zone3), nullptr);
+    EXPECT_EQ(c.arcIn(Color::Zone3)->thickness, 9) << "current zone";
+    ASSERT_NE(c.arcIn(Color::Zone2), nullptr);
+    EXPECT_EQ(c.arcIn(Color::Zone2)->thickness, 3) << "target zone stays bright but thin";
+    for (Color dim : {Color::Zone1Dim, Color::Zone4Dim, Color::Zone5Dim}) {
+        ASSERT_NE(c.arcIn(dim), nullptr);
+        EXPECT_EQ(c.arcIn(dim)->thickness, 3);
+    }
+
+    m.hrValid = false;
+    screen.render(c, m);
+    for (const auto& a : c.arcs) EXPECT_LE(a.thickness, 3) << "no HR: no zone is emphasised";
+    EXPECT_NE(c.arcIn(Color::Zone2), nullptr);
+}
+
 TEST(SettingsScreen, EditModeChangesValuesThroughEditor) {
     EventBus bus;
     SettingsStore store(bus);
@@ -342,6 +370,22 @@ TEST(ActivityDetailScreen, ScrollStopsAtBothEnds) {
     detail.handle(tap(KeyId::Down));
     detail.enter(0);
     EXPECT_TRUE(detail.showingSummary()) << "entering again starts at the summary";
+}
+
+TEST(ActivityDetailScreen, LapWithoutDistanceShowsShortUnknownPace) {
+    fakes::FakeRecorder history;
+    history.addToHistory(ActivityRecord{LocalTime{2026, 11, 18, 3, 8, 0, 0}, ActivitySummary{90000, 2500, 2, 0, 0}},
+                         {LapRecord{1, 60000, 0, 0}, LapRecord{2, 30000, 2500, 0}});
+    ActivityDetailScreen detail(history);
+    detail.select(0);
+    detail.enter(0);
+    detail.handle(tap(KeyId::Down));
+
+    fakes::FakeCanvas c;
+    detail.render(c, UiModel{});
+    EXPECT_TRUE(c.showsExactly("--")) << "fits the column next to KM";
+    EXPECT_FALSE(c.showsExactly("--:--"));
+    EXPECT_TRUE(c.showsExactly("2:00"));
 }
 
 TEST(ActivityDetailScreen, MissingActivityShowsNoData) {

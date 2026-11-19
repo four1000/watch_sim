@@ -13,6 +13,7 @@ constexpr int16_t kLapNumberX = 52;
 constexpr int16_t kLapTimeX = 122;
 constexpr int16_t kLapKmX = 168;
 constexpr int16_t kLapPaceX = 214;
+constexpr const char* kUnknownLapPace = "--";
 }
 
 void ActivityDetailScreen::onEnter(TickMs) { m_scroll = 0; }
@@ -100,7 +101,8 @@ void ActivityDetailScreen::renderLaps(ICanvas& c, const ActivityRecord& a) const
         c.drawText(kLapTimeX, y, formatDuration(lap.durationMs, buf, sizeof buf), Font::Small, Color::White, Align::Right);
         c.drawText(kLapKmX, y, formatDistanceKm(lap.distanceDm, buf, sizeof buf), Font::Small, Color::White,
                    Align::Right);
-        c.drawText(kLapPaceX, y, formatPace(paceSecPerKm(lap.durationMs, lap.distanceDm), buf, sizeof buf), Font::Small,
+        const uint16_t pace = paceSecPerKm(lap.durationMs, lap.distanceDm);
+        c.drawText(kLapPaceX, y, pace == 0 ? kUnknownLapPace : formatPace(pace, buf, sizeof buf), Font::Small,
                    Color::White, Align::Right);
     }
 }

@@ -115,12 +115,15 @@ public:
     void clear(ap::Color c) override {
         texts.clear();
         textColors.clear();
+        arcs.clear();
         background = c;
         ++clears;
     }
     void fillRect(int16_t, int16_t, int16_t, int16_t, ap::Color) override {}
     void fillCircle(int16_t, int16_t, int16_t, ap::Color) override {}
-    void drawArc(int16_t, int16_t, int16_t, int16_t, int16_t, uint8_t, ap::Color) override {}
+    void drawArc(int16_t, int16_t, int16_t, int16_t, int16_t, uint8_t thickness, ap::Color c) override {
+        arcs.push_back(Arc{thickness, c});
+    }
     void drawLine(int16_t, int16_t, int16_t, int16_t, uint8_t, ap::Color) override {}
     void drawText(int16_t, int16_t, std::string_view t, ap::Font, ap::Color c, ap::Align) override {
         texts.emplace_back(t);
@@ -145,8 +148,19 @@ public:
         }
         return ap::Color::Zone5;
     }
+    struct Arc {
+        uint8_t thickness;
+        ap::Color color;
+    };
+    const Arc* arcIn(ap::Color c) const {
+        for (const auto& a : arcs) {
+            if (a.color == c) return &a;
+        }
+        return nullptr;
+    }
     std::vector<std::string> texts;
     std::vector<ap::Color> textColors;
+    std::vector<Arc> arcs;
     ap::Color background = ap::Color::Zone5;
     int clears = 0;
 };

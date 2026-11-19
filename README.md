@@ -72,7 +72,7 @@ ap/                 portable application layer (the interesting part)
   services/         interfaces the AP layer needs (GPS, HR, recorder, ...)
 platform/sim/       simulator: OpenCV canvas, sensor thread, CSV recorder, dev panel
 app/main.cpp        composition root
-tests/              GoogleTest suite (91 tests), fakes for every service
+tests/              GoogleTest suite (93 tests), fakes for every service
 third_party/        OpenCV 4.10 (release DLL), cvui 2.9, GoogleTest 1.15 (vendored)
 docs/               architecture, design decisions, demo script
 dist/               prebuilt Release binary with every DLL it needs
@@ -103,7 +103,7 @@ Requirements: Windows x64, Visual Studio 2019 or newer (MSVC), CMake ≥ 3.20. A
 ```bash
 cmake -S . -B build
 cmake --build build --config RelWithDebInfo
-ctest --test-dir build -C RelWithDebInfo          # 91 tests
+ctest --test-dir build -C RelWithDebInfo          # 93 tests
 build\RelWithDebInfo\watch_sim.exe                 # interactive
 build\RelWithDebInfo\watch_sim.exe --trace         # + event trace on the console
 build\RelWithDebInfo\watch_sim.exe --script docs/demo.keys --out shots   # headless, writes PNGs

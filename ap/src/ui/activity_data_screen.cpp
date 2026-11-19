@@ -8,6 +8,8 @@ namespace ap {
 namespace {
 
 constexpr uint8_t kPageCount = static_cast<uint8_t>(ActivityDataScreen::Page::Count);
+constexpr int kCurrentZoneThickness = 9;
+constexpr int kOtherZoneThickness = 3;
 }
 
 void ActivityDataScreen::onEnter(TickMs) {
@@ -98,12 +100,13 @@ void ActivityDataScreen::renderHeartRate(ICanvas& c, const UiModel& m) const {
     constexpr int kStart = 135, kSpan = 270;
     constexpr int kSeg = kSpan / kZoneCount;
     for (uint8_t z = 1; z <= kZoneCount; ++z) {
-        const bool target = z == m.settings.targetZone;
-        const int thickness = target ? 9 : 6;
+        const bool current = m.hrValid && z == m.hrZone;
+        const bool highlighted = current || z == m.settings.targetZone;
+        const int thickness = current ? kCurrentZoneThickness : kOtherZoneThickness;
         const int roundCapDeg = static_cast<int>(std::ceil((thickness / 2.0) / (r * kDegToRad)));
         const int a0 = kStart + (z - 1) * kSeg;
         c.drawArc(cx, cy, r, static_cast<int16_t>(a0 + roundCapDeg), static_cast<int16_t>(a0 + kSeg - roundCapDeg),
-                  static_cast<uint8_t>(thickness), target ? zoneColor(z) : zoneColorDim(z));
+                  static_cast<uint8_t>(thickness), highlighted ? zoneColor(z) : zoneColorDim(z));
     }
 
     char buf[24];

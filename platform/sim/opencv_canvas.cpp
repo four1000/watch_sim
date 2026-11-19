@@ -13,12 +13,14 @@ struct FontSpec {
     int thickness;
 };
 
+constexpr double kDimZoneBrightness = 0.3;
+
 FontSpec spec(ap::Font f) {
     switch (f) {
-        case ap::Font::Small:  return {cv::FONT_HERSHEY_SIMPLEX, 0.45, 1};
-        case ap::Font::Medium: return {cv::FONT_HERSHEY_SIMPLEX, 0.70, 2};
-        case ap::Font::Large:  return {cv::FONT_HERSHEY_DUPLEX, 0.95, 2};
-        case ap::Font::Number: return {cv::FONT_HERSHEY_DUPLEX, 1.70, 3};
+        case ap::Font::Small:  return {cv::FONT_HERSHEY_SIMPLEX, 0.36, 1};
+        case ap::Font::Medium: return {cv::FONT_HERSHEY_SIMPLEX, 0.61, 2};
+        case ap::Font::Large:  return {cv::FONT_HERSHEY_DUPLEX, 0.86, 2};
+        case ap::Font::Number: return {cv::FONT_HERSHEY_DUPLEX, 1.61, 3};
     }
     return {cv::FONT_HERSHEY_SIMPLEX, 0.5, 1};
 }
@@ -45,11 +47,11 @@ cv::Scalar OpenCvCanvas::toBgr(ap::Color c) {
         case ap::Color::Zone3:     return {70, 190, 60};
         case ap::Color::Zone4:     return {0, 150, 255};
         case ap::Color::Zone5:     return {60, 50, 230};
-        case ap::Color::Zone1Dim:  return toBgr(ap::Color::Zone1) * 0.8;
-        case ap::Color::Zone2Dim:  return toBgr(ap::Color::Zone2) * 0.8;
-        case ap::Color::Zone3Dim:  return toBgr(ap::Color::Zone3) * 0.8;
-        case ap::Color::Zone4Dim:  return toBgr(ap::Color::Zone4) * 0.8;
-        case ap::Color::Zone5Dim:  return toBgr(ap::Color::Zone5) * 0.8;
+        case ap::Color::Zone1Dim:  return toBgr(ap::Color::Zone1) * kDimZoneBrightness;
+        case ap::Color::Zone2Dim:  return toBgr(ap::Color::Zone2) * kDimZoneBrightness;
+        case ap::Color::Zone3Dim:  return toBgr(ap::Color::Zone3) * kDimZoneBrightness;
+        case ap::Color::Zone4Dim:  return toBgr(ap::Color::Zone4) * kDimZoneBrightness;
+        case ap::Color::Zone5Dim:  return toBgr(ap::Color::Zone5) * kDimZoneBrightness;
     }
     return {255, 0, 255};
 }
