@@ -36,8 +36,12 @@ private:
     void onEvent(const Event& e) override;
     void onTimer(uint8_t tag, TickMs now) override;
 
-    void show(TickMs now, const char* title, const char* detail, Color color, bool modal, uint32_t durationMs);
+    enum class Cue : uint8_t { None, Up, Down };
+
+    void show(TickMs now, const char* title, const char* detail, Color color, bool modal, uint32_t durationMs,
+              Cue cue = Cue::None);
     void hide();
+    void renderCue(ICanvas& c, int16_t cx, int16_t y) const;
 
     EventBus& m_bus;
     SoftTimerPool& m_timers;
@@ -46,6 +50,7 @@ private:
     bool m_visible = false;
     bool m_modal = false;
     Color m_color = Color::DarkGray;
+    Cue m_cue = Cue::None;
     char m_title[20] = {};
     char m_detail[28] = {};
     TimerHandle m_timer{};

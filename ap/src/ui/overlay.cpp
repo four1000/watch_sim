@@ -4,6 +4,15 @@
 
 namespace ap {
 
+namespace {
+constexpr int16_t kCueCentreY = 30;
+constexpr int16_t kCueSpacing = 16;
+constexpr int16_t kCueTitleY = 22;
+constexpr int16_t kCueHalfWidth = 18;
+constexpr int16_t kCueHalfHeight = 9;
+constexpr uint8_t kCueThickness = 4;
+}
+
 void OverlayManager::attach() {
     m_sub = m_bus.subscribe(*this, topics(EventType::HrAlert, EventType::LapCompleted,
                                           EventType::ActivityStateChanged, EventType::KeyLockChanged));
@@ -21,13 +30,13 @@ void OverlayManager::onEvent(const Event& e) {
     char b[12];
     const TickMs t = e.timestampMs;
     switch (e.type) {
-        case EventType::HrAlert:
-            std::snprintf(detail, sizeof detail, "%u bpm  Z%u > Z%u", static_cast<unsigned>(e.alert.bpm),
-                          static_cast<unsigned>(e.alert.zone), static_cast<unsigned>(e.alert.targetZone));
-            show(t, e.alert.kind == HrAlertKind::AboveTarget ? "HR HIGH" : "HR LOW", detail,
-                 e.alert.kind == HrAlertKind::AboveTarget ? Color::Red : Color::Blue, true, kAlertMs);
+        case EventType::HrAlert: {
+            const bool high = e.alert.kind == HrAlertKind::AboveTarget;
+            show(t, high ? "SLOW DOWN" : "SPEED UP", "", high ? Color::Red : Color::Blue, true, kAlertMs,
+                 high ? Cue::Down : Cue::Up);
             m_vibrator.vibrate(VibePattern::Long);
             break;
+        }
 
         case EventType::LapCompleted: {
             char title[sizeof m_title];
@@ -76,8 +85,9 @@ void OverlayManager::onEvent(const Event& e) {
 void OverlayManager::onTimer(uint8_t, TickMs) { hide(); }
 
 void OverlayManager::show(TickMs now, const char* title, const char* detail, Color color, bool modal,
-                          uint32_t durationMs) {
+                          uint32_t durationMs, Cue cue) {
     if (this->modal() && !modal) return;
+    m_cue = cue;
     std::snprintf(m_title, sizeof m_title, "%s", title);
     std::snprintf(m_detail, sizeof m_detail, "%s", detail);
     m_color = color;
@@ -99,6 +109,12 @@ void OverlayManager::render(ICanvas& c, const UiModel&) const {
     const int16_t cy = static_cast<int16_t>(c.height() / 2);
     if (m_modal) {
         c.fillCircle(cx, cy, static_cast<int16_t>(cx - 14), m_color);
+        if (m_cue != Cue::None) {
+            renderCue(c, cx, static_cast<int16_t>(cy - kCueCentreY - kCueSpacing / 2));
+            renderCue(c, cx, static_cast<int16_t>(cy - kCueCentreY + kCueSpacing / 2));
+            c.drawText(cx, static_cast<int16_t>(cy + kCueTitleY), m_title, Font::Large, Color::White, Align::Center);
+            return;
+        }
         c.drawText(cx, static_cast<int16_t>(cy - 18), m_title, Font::Large, Color::White, Align::Center);
         c.drawText(cx, static_cast<int16_t>(cy + 18), m_detail, Font::Small, Color::White, Align::Center);
         c.drawText(cx, static_cast<int16_t>(cy + 48), "any key", Font::Small, Color::LightGray, Align::Center);
@@ -108,6 +124,14 @@ void OverlayManager::render(ICanvas& c, const UiModel&) const {
         c.drawText(cx, static_cast<int16_t>(cy - 10), m_title, Font::Large, m_color, Align::Center);
         c.drawText(cx, static_cast<int16_t>(cy + 18), m_detail, Font::Small, Color::White, Align::Center);
     }
+}
+
+void OverlayManager::renderCue(ICanvas& c, int16_t cx, int16_t y) const {
+    const int16_t tipDy = m_cue == Cue::Up ? -kCueHalfHeight : kCueHalfHeight;
+    const int16_t tipY = static_cast<int16_t>(y + tipDy);
+    const int16_t baseY = static_cast<int16_t>(y - tipDy);
+    c.drawLine(static_cast<int16_t>(cx - kCueHalfWidth), baseY, cx, tipY, kCueThickness, Color::White);
+    c.drawLine(cx, tipY, static_cast<int16_t>(cx + kCueHalfWidth), baseY, kCueThickness, Color::White);
 }
 
 }

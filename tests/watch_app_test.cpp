@@ -235,15 +235,26 @@ TEST_F(App, HrAlertDuringRunIsModalAndVibrates) {
     press(KeyId::Start);
     press(KeyId::Start);
     press(KeyId::Start);
-    for (int i = 0; i < 100 && std::string(app.overlayTitle()) != "HR HIGH"; ++i) {
+    for (int i = 0; i < 100 && std::string(app.overlayTitle()) != "SLOW DOWN"; ++i) {
         if (i % 10 == 0) app.postHr(HrSample{now, 180, true});
         advance(100);
     }
-    EXPECT_STREQ(app.overlayTitle(), "HR HIGH");
+    EXPECT_STREQ(app.overlayTitle(), "SLOW DOWN");
     ASSERT_FALSE(vibrator.patterns.empty());
     EXPECT_EQ(vibrator.patterns.back(), VibePattern::Long);
     press(KeyId::Back);
     EXPECT_EQ(app.session().metrics().lapCount(), 0u);
+}
+
+TEST_F(App, HrBelowTargetAsksRunnerToSpeedUp) {
+    press(KeyId::Start);
+    press(KeyId::Start);
+    press(KeyId::Start);
+    for (int i = 0; i < 100 && std::string(app.overlayTitle()) != "SPEED UP"; ++i) {
+        if (i % 10 == 0) app.postHr(HrSample{now, 80, true});
+        advance(100);
+    }
+    EXPECT_STREQ(app.overlayTitle(), "SPEED UP");
 }
 
 TEST_F(App, KeyLockSwallowsEverythingButDoubleLight) {
