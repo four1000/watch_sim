@@ -54,6 +54,7 @@ flowchart TD
 
     NAV --> RENDER
     OM --> RENDER
+    SVC ~~~ RENDER
 
     classDef input  fill:#1e88e5,stroke:#0d47a1,stroke-width:3px,color:#fff
     classDef chain  fill:#5c6bc0,stroke:#283593,stroke-width:3px,color:#fff
@@ -77,6 +78,7 @@ flowchart TD
     style RENDER fill:#00897b1a,stroke:#00897b,stroke-width:2px,color:#00897b
     linkStyle default stroke-width:2px
     linkStyle 9,10,12 stroke-width:4px
+    linkStyle 22 stroke-width:0px
 ```
 
 | Color | Shape | Role |
