@@ -12,6 +12,16 @@ The backend (GPS, optical HR, storage) is simulated. The graphics are deliberate
 |---|---|---|
 | ![](docs/images/13_activity_summary.png) | ![](docs/images/14_lap_table.png) | ![](docs/images/16_history.png) |
 
+## Quick start
+
+A prebuilt `watch_sim.exe` is included in `dist/`, so you can run it right away on Windows 10/11 x64. No Visual Studio, CMake or extra runtime is needed:
+
+```bash
+dist\watch_sim.exe
+```
+
+You can also build it yourself from source with MSVC and CMake. See [Run the prebuilt binary](#run-the-prebuilt-binary-no-build-needed) and [Build and run](#build-and-run) for details.
+
 ## What the AP layer does
 
 ```
