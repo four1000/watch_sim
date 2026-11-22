@@ -24,20 +24,71 @@ You can also build it yourself from source with MSVC and CMake. See [Run the pre
 
 ## What the AP layer does
 
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "18px"}, "flowchart": {"curve": "basis", "padding": 18, "wrappingWidth": 400, "subGraphTitleMargin": {"top": 4, "bottom": 12}}}}%%
+flowchart TD
+    BTN(["🔘 5 buttons"]) -- "postKey" --> INBOX[("📥 WatchApp inbox<br/><i>Active Object · mutex, bounded</i>")]
+    DRV[/"❤️ 🛰️ HR / GPS driver threads"/] -- "postHr / postGps" --> INBOX
+    INBOX -- "key edges" --> GR["✋ GestureRecognizer<br/><i>short · long · double</i>"]
+    INBOX -- "HR / GPS" --> BUS(("📡 EventBus"))
+    GR -- "Gesture" --> BUS
+    BUS --->|Gesture| IR
+
+    subgraph IR["⛓️&nbsp;InputRouter&nbsp;·&nbsp;Chain&nbsp;of&nbsp;Responsibility"]
+        KL["🔒 KeyLock"] --> OVH["💬 Overlay"] --> TOP["📱 Navigator<br/><i>forwards key to top Screen</i>"] --> BL["💡 Backlight"]
+    end
+
+    TOP == "ICommand · IActivityControl" ==> AS{{"🏃 ActivitySession<br/><i>State pattern</i>"}}
+    AS <==> BUS
+    AS -.- SVC[["🔌 IGpsService<br/>IActivityRecorder"]]
+    HZ{{"💓 HrZoneMonitor<br/><i>hysteresis · debounce</i>"}} <==> BUS
+
+    BUS --> AFC["🧭 ActivityFlowCoordinator<br/><i>Mediator</i>"]
+    BUS --> OM["🔔 OverlayManager<br/><i>toasts · alerts · vibration</i>"]
+    AFC --> NAV["🗂️ Navigator<br/><i>push / pop screens</i>"]
+
+    subgraph RENDER["🎨 Render pipeline"]
+        direction LR
+        UM[("📸 UiModel<br/><i>snapshot of session · zones</i>")] --> SR["🖼️ Screen::render<br/><i>NVI</i>"] --> TC["🎭 ThemedCanvas<br/><i>Decorator</i>"] --> CV[["✏️ ICanvas"]] --> OCV(["🪟 OpenCV"])
+    end
+
+    NAV --> RENDER
+    OM --> RENDER
+
+    classDef input  fill:#1e88e5,stroke:#0d47a1,stroke-width:3px,color:#fff
+    classDef chain  fill:#5c6bc0,stroke:#283593,stroke-width:3px,color:#fff
+    classDef driver fill:#fb8c00,stroke:#e65100,stroke-width:3px,color:#fff
+    classDef bus    fill:#e53935,stroke:#b71c1c,stroke-width:4px,color:#fff
+    classDef domain fill:#43a047,stroke:#1b5e20,stroke-width:3px,color:#fff
+    classDef iface  fill:#78909c,stroke:#37474f,stroke-width:2px,stroke-dasharray:6 4,color:#fff
+    classDef ui     fill:#8e24aa,stroke:#4a148c,stroke-width:3px,color:#fff
+    classDef render fill:#00897b,stroke:#004d40,stroke-width:3px,color:#fff
+
+    class BTN,GR input
+    class KL,OVH,TOP,BL chain
+    class DRV,INBOX driver
+    class BUS bus
+    class AS,HZ domain
+    class SVC iface
+    class AFC,OM,NAV ui
+    class UM,SR,TC,CV,OCV render
+
+    style IR     fill:#5c6bc01a,stroke:#5c6bc0,stroke-width:2px,color:#5c6bc0
+    style RENDER fill:#00897b1a,stroke:#00897b,stroke-width:2px,color:#00897b
+    linkStyle default stroke-width:2px
+    linkStyle 9,10,12 stroke-width:4px
 ```
- 5 buttons ──► GestureRecognizer ──► InputRouter (Chain of Responsibility)
-                                        KeyLock → Overlay → Navigator(top Screen) → Backlight
-                                                               │ ICommand
- HR / GPS driver threads                                       ▼
-   └─ postHr/postGps ─► WatchApp inbox ─► EventBus ◄── ActivitySession (State pattern)
-        (mutex, bounded)   (Active Object)   │  ▲         IGpsService / IActivityRecorder
-                                             │  └── HrZoneMonitor (hysteresis, debounce)
-                                             ▼
-                        ActivityFlowCoordinator (Mediator) ─► Navigator (screen stack)
-                        OverlayManager (toasts, alerts, vibration)
-                                             │
-                         UiModel snapshot ─► Screen::render (NVI) ─► ICanvas ─► OpenCV
-```
+
+| Color | Shape | Role |
+|---|---|---|
+| Blue | Stadium / box | Physical input and gesture detection |
+| Indigo | Box (in a frame) | Input handler chain |
+| Orange | Parallelogram / cylinder | Driver threads and the thread-safe inbox |
+| Red | Circle | EventBus, the hub every module talks through |
+| Green | Hexagon | Domain logic: activity state and heart-rate zones |
+| Gray, dashed | Double-sided box | Service interfaces injected by the platform layer |
+| Purple | Box | UI coordination: flow, overlays, screen stack |
+| Teal | Mixed (in a frame) | Render pipeline down to OpenCV |
 
 ## Design patterns and where they are used
 

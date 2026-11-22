@@ -7,3 +7,14 @@ activities/
 
 # personal interview notes, kept local only
 docs/talking-points.zh-TW.md
+
+# demo.keys screenshots not referenced by README
+docs/images/02_activity_menu.png
+docs/images/03_ready_acquiring_gps.png
+docs/images/04_ready_gps_fix.png
+docs/images/08_lap_toast.png
+docs/images/09_lap_page.png
+docs/images/10_key_locked.png
+docs/images/12_save_failed.png
+docs/images/15_back_home.png
+docs/images/17_history_detail.png
