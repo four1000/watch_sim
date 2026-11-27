@@ -1,4 +1,7 @@
 build/
+build-mac/
+third_party/opencv-mac/
+third_party/opencv-mac-build/
 out/
 .vs/
 shots/
@@ -7,6 +10,7 @@ activities/
 
 # personal interview notes, kept local only
 docs/talking-points.zh-TW.md
+docs/slides-handoff.md
 
 # demo.keys screenshots not referenced by README
 docs/images/02_activity_menu.png

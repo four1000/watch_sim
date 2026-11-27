@@ -1,6 +1,6 @@
 # Fitness Watch Simulator: Application Layer Architecture in C++
 
-A Windows simulator of a GPS running watch, built to show **how the application (AP) layer is designed**: the part between drivers/services and the screen.
+A Windows and macOS simulator of a GPS running watch, built to show **how the application (AP) layer is designed**: the part between drivers/services and the screen.
 
 The backend (GPS, optical HR, storage) is simulated. The graphics are deliberately simple. What matters is the middle layer: how gestures, sensor data and screens are coordinated with object-oriented design, under embedded constraints.
 
@@ -14,10 +14,11 @@ The backend (GPS, optical HR, storage) is simulated. The graphics are deliberate
 
 ## Quick start
 
-A prebuilt `watch_sim.exe` is included in `dist/`, so you can run it right away on Windows 10/11 x64. No Visual Studio, CMake or extra runtime is needed:
+Prebuilt binaries are included, so you can run the simulator right away. No compiler, CMake or extra runtime is needed:
 
 ```bash
-dist\watch_sim.exe
+dist\watch_sim.exe          # Windows 10/11 x64
+dist-mac/watch_sim          # macOS 12+ on Apple Silicon
 ```
 
 You can also build it yourself from source with MSVC and CMake. See [Run the prebuilt binary](#run-the-prebuilt-binary-no-build-needed) and [Build and run](#build-and-run) for details.
@@ -112,7 +113,7 @@ flowchart TD
 
 ## Embedded constraints, enforced by the build
 
-The `ap` library is compiled with `/GR- /EHs-c- /D_HAS_EXCEPTIONS=0 /W4 /WX`:
+The `ap` library is compiled with `/GR- /EHs-c- /D_HAS_EXCEPTIONS=0 /W4 /WX` on MSVC, and with `-fno-rtti -fno-exceptions -Wall -Wextra -Werror` on Apple Clang:
 
 - **No RTTI, no exceptions.** Errors are return values and events (`StartFailed`, `SaveFailed`).
 - **No heap after `init()`.** Every container is fixed-capacity, with overflow counters. A test replaces `operator new` and runs a 2-minute activity with alerts, laps and save: [**0 allocations**](tests/watch_app_test.cpp).
@@ -137,8 +138,10 @@ platform/sim/       simulator: OpenCV canvas, sensor thread, CSV recorder, dev p
 app/main.cpp        composition root
 tests/              GoogleTest suite (94 tests), fakes for every service
 third_party/        OpenCV 4.10 (release DLL), cvui 2.9, GoogleTest 1.15 (vendored)
+scripts/            build_opencv_mac.sh: minimal static OpenCV 4.10 for macOS
 docs/               architecture, design decisions, demo script
-dist/               prebuilt Release binary with every DLL it needs
+dist/               prebuilt Windows Release binary with every DLL it needs
+dist-mac/           prebuilt macOS binary, OpenCV linked in statically
 ```
 
 ## Run the prebuilt binary (no build needed)
@@ -159,6 +162,17 @@ cmake --build build --config Release --target watch_sim
 cmake --install build --config Release --prefix dist
 ```
 
+### macOS
+
+`dist-mac/watch_sim` is a single executable for Apple Silicon (arm64), macOS 12 or newer. OpenCV is linked in statically, so it only depends on libraries that ship with macOS. Copy the folder anywhere and run:
+
+```bash
+dist-mac/watch_sim                                          # interactive
+dist-mac/watch_sim --script dist-mac/demo.keys --out shots  # headless demo, writes PNGs
+```
+
+The first launch of a downloaded copy may be blocked by Gatekeeper because the binary is not signed. Allow it in System Settings > Privacy & Security, or run `xattr -d com.apple.quarantine dist-mac/watch_sim`.
+
 ## Build and run
 
 Requirements: Windows x64, Visual Studio 2019 or newer (MSVC), CMake ≥ 3.20. All dependencies are vendored.
@@ -174,7 +188,25 @@ build\RelWithDebInfo\watch_sim.exe --script docs/demo.keys --out shots   # headl
 
 > Use `RelWithDebInfo` or `Release` for `watch_sim`. Only the release `opencv_world` DLL is vendored, because the debug one is larger than GitHub's 100 MB limit. `ap` and `ap_tests` build in any configuration.
 
+### macOS
+
+Requirements: Apple Silicon, Xcode command line tools, CMake ≥ 3.20 (`brew install cmake`). OpenCV is not vendored for macOS. The script downloads the OpenCV 4.10.0 source (checked against its SHA-256) and builds only `core`, `imgproc`, `imgcodecs` (PNG) and `highgui` (Cocoa) as static libraries into `third_party/opencv-mac/`. This takes a few minutes and only has to run once.
+
+```bash
+scripts/build_opencv_mac.sh                         # once: static OpenCV -> third_party/opencv-mac/
+cmake -S . -B build-mac -DCMAKE_BUILD_TYPE=Release
+cmake --build build-mac -j8
+ctest --test-dir build-mac                          # 94 tests
+build-mac/watch_sim                                 # interactive
+build-mac/watch_sim --script docs/demo.keys --out shots   # headless, writes PNGs
+cmake --install build-mac --prefix dist-mac         # rebuild dist-mac/
+```
+
+The macOS build uses the same OpenCV version as Windows, so the demo screenshots match the Windows ones pixel for pixel. The only difference is the path separator in the "Saved:" line of the dev panel.
+
 **Controls:** Space = LIGHT · ↑/↓ = UP/DOWN · Enter = START · Backspace = BACK · Esc = quit. You can also hold the on-screen buttons with the mouse. Double-press LIGHT to toggle the key lock.
+
+On macOS, OpenCV only reports key presses, not releases, so each key press is sent as a short press. For a long press, hold the on-screen button with the mouse.
 
 The dev panel on the right lets you move the HR and speed sliders, take away the GPS signal or HR contact, inject faults (GPS start, storage full, save failure), and watch every `EventBus` dispatch live.
 

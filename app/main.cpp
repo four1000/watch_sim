@@ -3,7 +3,9 @@
 #pragma message("watch_sim: build RelWithDebInfo/Release - third_party ships only the release opencv_world DLL")
 #endif
 
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 #include <array>
 #include <filesystem>
@@ -146,12 +148,21 @@ int runInteractive(const Options& opt) {
 
     cvui::init(kWindow);
     s.sensors.runThread(tick);
+#ifdef _WIN32
     const HWND hwnd = FindWindowA(nullptr, kWindow);
+#else
+    // No async key-state API here: cv::waitKeyEx only reports presses, so a
+    // press is held as a short pulse. Long press: hold the on-screen button.
+    constexpr ap::TickMs kKeyPulseMs = 120;
+    std::array<ap::TickMs, ap::kKeyCount> keyUntil{};
+    std::array<bool, ap::kKeyCount> keyHeld{};
+#endif
 
     for (;;) {
         const ap::TickMs now = tick.now();
 
         KeyLevels levels{};
+#ifdef _WIN32
         if (GetForegroundWindow() == hwnd) {
             auto down = [](int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; };
             levels[ap::keyIndex(ap::KeyId::Light)] = down(VK_SPACE);
@@ -160,6 +171,12 @@ int runInteractive(const Options& opt) {
             levels[ap::keyIndex(ap::KeyId::Start)] = down(VK_RETURN);
             levels[ap::keyIndex(ap::KeyId::Back)] = down(VK_BACK);
         }
+#else
+        for (std::size_t i = 0; i < ap::kKeyCount; ++i) {
+            if (keyHeld[i] && ap::timeReached(now, keyUntil[i])) keyHeld[i] = false;
+            levels[i] = keyHeld[i];
+        }
+#endif
         ap::KeyId hit{};
         if (cvui::mouse(kWindow, cvui::LEFT_BUTTON, cvui::IS_DOWN) && s.watch.hit(kWatchOrigin, cvui::mouse(kWindow), hit)) {
             levels[ap::keyIndex(hit)] = true;
@@ -171,8 +188,28 @@ int runInteractive(const Options& opt) {
         cvui::update(kWindow);
         cv::imshow(kWindow, s.frame);
 
+#ifdef _WIN32
         const int key = cv::waitKey(15);
         if (key == 27) break;
+#else
+        const int key = cv::waitKeyEx(15);
+        if (key == 27) break;
+        ap::KeyId pressed{};
+        bool mapped = true;
+        switch (key) {
+            case ' ':              pressed = ap::KeyId::Light; break;
+            case 13: case 10:      pressed = ap::KeyId::Start; break;
+            case 8: case 127:      pressed = ap::KeyId::Back;  break;
+            case 0xF700: case 0x260000: pressed = ap::KeyId::Up;   break;  // Cocoa / GTK-style codes
+            case 0xF701: case 0x280000: pressed = ap::KeyId::Down; break;
+            default: mapped = false; break;
+        }
+        if (mapped) {
+            const std::size_t i = ap::keyIndex(pressed);
+            keyHeld[i] = true;
+            keyUntil[i] = static_cast<ap::TickMs>(tick.now() + kKeyPulseMs);
+        }
+#endif
         if (cv::getWindowProperty(kWindow, cv::WND_PROP_VISIBLE) < 1.0) break;
     }
     s.sensors.stopThread();

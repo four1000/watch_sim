@@ -3,3 +3,5 @@
 *.lib binary
 *.png binary
 *.exe binary
+dist-mac/watch_sim binary
+*.sh text eol=lf

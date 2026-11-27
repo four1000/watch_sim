@@ -26,7 +26,11 @@ ap::LocalTime SimWallClock::now() const {
     if (!m_fixed) {
         const std::time_t t = std::time(nullptr);
         std::tm tm{};
+#ifdef _WIN32
         localtime_s(&tm, &t);
+#else
+        localtime_r(&t, &tm);
+#endif
         return fromTm(tm);
     }
     const uint32_t secs = (m_tick ? *m_tick : 0u) / 1000u;

@@ -8,6 +8,7 @@ set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 add_subdirectory(${TP}/googletest ${CMAKE_BINARY_DIR}/googletest EXCLUDE_FROM_ALL)
 
+if(MSVC)
 # ---- OpenCV 4.10.0 (prebuilt opencv_world, Release only) -------------------
 # Only the Release DLL is vendored: the Debug DLL is 126 MB, above GitHub's
 # 100 MB file limit. Debug builds of watch_sim would mix the debug CRT with a
@@ -21,6 +22,18 @@ set_target_properties(opencv_world PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES ${TP}/opencv/include
   MAP_IMPORTED_CONFIG_DEBUG     ""
   MAP_IMPORTED_CONFIG_MINSIZEREL "")
+else()
+  # macOS: the same OpenCV version, built from source as minimal static libs
+  # by scripts/build_opencv_mac.sh, so dist-mac/watch_sim is self-contained.
+  find_package(OpenCV 4.10 EXACT QUIET COMPONENTS core imgproc highgui imgcodecs
+               PATHS ${TP}/opencv-mac NO_DEFAULT_PATH)
+  if(NOT OpenCV_FOUND)
+    message(FATAL_ERROR "Static OpenCV 4.10 not found in ${TP}/opencv-mac. Run scripts/build_opencv_mac.sh first.")
+  endif()
+  add_library(opencv_world INTERFACE)
+  target_include_directories(opencv_world SYSTEM INTERFACE ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(opencv_world INTERFACE ${OpenCV_LIBS})
+endif()
 
 # ---- cvui 2.9.0-beta (single header) ----------------------------------------
 add_library(cvui INTERFACE)
